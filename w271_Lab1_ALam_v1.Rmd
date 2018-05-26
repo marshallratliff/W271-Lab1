@@ -1,0 +1,155 @@
+---
+title: "Statistical Methods for Discrete Response, Time Series, and Panel Data (W271): Lab 1"
+author: "Professor Jeffrey Yau"
+output: 
+  pdf_document:
+  toc: true
+  number_sections: true
+fontsize: 11pt
+geometry: margin=1in
+---
+
+# Instructions:
+
+*  $\textbf{Due Date: 6/3/2018 (Sunday)}$
+*  $\textbf{Page limit of the pdf report: 15, which does not include the table of content page}$
+  * Do not play around with the margin, linespace, and font size;
+  * Use the one I specify below:
+    * fontsize=11pt
+    * margin=1in
+    * line_spacing=single
+
+* Submission:
+    * Each group only makes to make one submission to ISVC; have one of your team members made the submission
+    * Submit 2 files:
+        1. A pdf file including the summary, the details of your analysis, and all the R codes used to produce the analysis. Please do not suppress the codes in your pdf file.
+        2. R markdown file used to produce the pdf file
+    * Each group only needs to submit one set of files
+    * Use the following file naming convensation; fail to do so will receive 10% reduction in the grade:
+        * FirstNameLastName1_FirstNameLastName2_FirstNameLastName3_LabNumber.fileExtension
+        * For example, if you have three students in the group for Lab 1, and their names are Paul Laskowski, Drew Paulin, and Jeffrey Yau, then you should name your file the following
+            * PaulLaskowski_DrewPaulin_JeffreyYau_Lab1.Rmd
+            * PaulLaskowski_DrewPaulin_JeffreyYau_Lab1.pdf
+    * Although it sounds obvious, please write the name of each members of your group on page 1 of your pdf and Rmd reports.
+    * This lab can be completed in a group of up to 4 people. Each group only needs to make one submission. I strongly encourage students to work in groups for the lab.
+
+* Other general guidelines:
+    * For statistical methods that we cover in this course, use only the R libraries and functions that are covered in this course. If you use libraries and functions that we have not covered but are for the statistical methods we learn in this course, you have to provide (1) explanation of why such libraries and functions are used instead and (2) reference to the library documentation. Lacking the explanation and reference to the documentation will result in a score of zero for the corresponding question.
+
+    * Your report needs to include
+
+        * A thorough analysis of the given dataset, which includ examiniation of anomalies, missing values, potential of top and/or bottom code, etc, in each of the variables.
+        
+        * An introduction section that summarize the question(s) being asked, the methodology employed (including the final model specification), and a highlight of the results.
+        
+        * A comprehensive Exploratory Data Analysis (EDA) analysis, which includes both graphical and tabular analysis, as taught in this course. Output-dump (that is, graphs and tables that don't come with explanations) will result in a very low, if not zero, score. Since the report has a page-limit, you will have to selectively include the visuals that are most relevant for the analysis and concise explanation of the visuals. Please do not ramble.  Please remember that your report will have to "walk me through" your analysis.
+    
+      * A modeling section that include a detailed narrative. Make sure that your audience (in this case, the professors and your classmates) can easily follow the logic of your analysis that leads to your final model.
+
+          * The rationale ofdecisions made in your modeling, supported by sufficient empirical evidence. Use the insights generated from your EDA step to guide your modeling step, as we discussed in live sessions.
+    
+          * All the steps used to arrive at your final model; these steps must be clearly shown and explained.
+
+      * A conclusion that summarize the final result with respect to the question(s) being asked and key takeaways from the analysis.
+
+
+* Other requirements:
+
+  *  Students are expected to act with regards to UC Berkeley Academic Integrity.
+
+
+\newpage
+# Investigation of the 1989 Space Shuttel Challenger Accident 
+
+1. Carefullly read the Dala et al (1989) paper (attached in this zip file).
+
+2. Answer question 4 and 5 on Chapter 2 (page 129 and 130) of Bilder and Loughin's *"Analysis of Categorical Data with R"*
+
+4. 
+(a) The authors use logistic regression to estimate the probability an O-ring will fail. In order to use this model, the authors needed to assume that each O-ring is independent for each launch. Discuss why this assumption is necessary and the potential problems with it. Note that a subsequent analysis helped to alleviate the authors’ concerns about independence.
+(b) Estimate the logistic regression model using the explanatory variables in a linear form.
+(c) Perform LRTs (likelihood ratio test) to judge the importance of the explanatory variables in the model.
+(d) The authors chose to remove Pressure from the model based on the LRTs. Based on your results, discuss why you think this was done. Are there any potential problems with removing this variable?
+
+5. Continuing Exercise 4, consider the simplified model logit(pie) =  Beta_0 +  Beta_1*Temp, where pie is the probability of an O-ring failure. Complete the following:
+(a) Estimate the model.
+
+(b) Construct two plots: (1) pie vs. Temp and (2) Expected number of failures vs. Temp. Use a temperature range of 31  to 81  on the x-axis even though the minimum temperature in the data set was 53 .
+(c) Include the 95% Wald confidence interval bands for pie on the plot. Why are the bands much wider for lower temperatures than for higher temperatures?
+- less data points on lower temperatures
+
+(d) The temperature was 31  at launch for the Challenger in 1986. Estimate the probability of an O-ring failure using this temperature, and compute a corre- sponding confidence interval. Discuss what assumptions need to be made in order to apply the inference procedures.
+
+(e) Rather than using Wald or profile LR intervals for the probability of failure, Dalal et al. (1989) use a parametric bootstrap to compute intervals. Their process was to (1) simulate a large number of data sets (n = 23 for each) from the estimated model of logit(pieˆ) =  Beta_ˆ0 +  Beta_ˆ1\*Temp; (2) estimate new models for each data set, say logit(pieˆ+) =  Beta_ˆ0? +  Beta_ˆ1\*Temp; and (3) compute pieˆ+ at a specific temperature of interest. The authors used the 0.05 and 0.95 observed quantiles from the pieˆ+ sim- ulated distribution as their 90% confidence interval limits. Using the parametric bootstrap, compute 90% confidence intervals separately at temperatures of 31  and 72 .27
+(f) Determine if a quadratic term is needed in the model for the temperature.
+
+3. In addition to the questions in Question 4 and 5, answer the following questions:
+    a. Interpret the main result of your final model in terms of both odds and probability of failure 
+
+    b. With the same set of explanatory variables in your final model, estimate a linear regression model. Explain the model results; conduct model diagnostic; and assess the validity of the model assumptions.  Would you use the linear regression model or binary logistic regression in this case.  Why? Or, why not?
+
+
+```{r}
+data=read.csv("challenger.csv", header=TRUE)
+#data[,"O.ring"]
+summary(data)
+```
+```{r}
+hist(data$Temp)
+hist(data$Pressure)
+hist(data$O.ring)
+```
+
+
+```{r}
+library(ggplot2)
+plot(data$Temp, data$O.ring)
+```
+
+```{r}
+noise <- runif(length(data$Pressure), min=-5, max = 5)
+pressure_noise <- data$Pressure + noise
+plot(pressure_noise, data$O.ring)
+```
+
+```{r}
+noise <- runif(length(data$Pressure), min=-5, max = 5)
+pressure_noise <- data$Pressure + noise
+plot(pressure_noise, data$O.ring)
+```
+
+
+# What the paper did
+
+- model with temp and pressure as x
+- model with temp only  - shows temp most important (logit, binomial)
+    - lack of fit statistic G^2
+    - compare G^2, better but not significant, still imply pressure not seem to have much effect
+    - 90% bootstrap CI for E(# incident) for each temperatuure, hold pressure constant at 50psi, then 200psi. the intervals for the 2 pressures overlapped greatly
+
+- Model 3.2
+  - contours of the loglikelihood function
+- Binary response model (accident, no accident)
+  - statistical independence of each joint not required
+
+- CI for the estimated parameters
+  - parametric bootstrap procedure (sample taken from the fitted model, rather than original data, use model alpha and beta to generate random samples with replacement), see 5% and 95% point of the boostrap distribution
+  
+- Sensitivity of chosen model to individual data points
+  - eliminate each data point in turn and estimat the model 
+  - further study of point 21 - see model with and without pt 21 look at prob, not too diff
+  
+- probit, complementary log log
+- whether the transform is linearly related to the covariates
+  - check linearity, add squared term in temperature. G^2 diff by 0.494, shows curvature insignificant to justify squaring
+  - diagnostics on nonparametric estimate of the relationship between prob and temp
+    - smoothed the data estimates of prob vs temp using a method: use specification of a fraction of the data in constructing smoothed values using a moving window
+  - standard residual vs temperature, doesn't appear to have quadratic / nonlinear relationship between log prob 
+  - local deviance plot (local estimate of deviance, based on the smoothed values for each of the 23 points)
+  - alternating conditional expectations algorithm (the logit transform of the smoothed estimates of probability are regressed on temperature using appropriate weights)
+
+# MODEL PROB COMPLETE FAILURE
+- primary o-ring erosion, primary o-ring blowby, seconddary o-ring erosion, secondary o-ring failure
+
+
+
