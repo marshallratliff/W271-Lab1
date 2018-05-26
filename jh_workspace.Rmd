@@ -1,0 +1,121 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(car)
+library(dplyr)
+library(Hmisc)
+library(ggplot2)
+
+
+```
+
+
+```{r}
+setwd("C:/Users/Jessica/Desktop/W271 Advanced Statistical Modeling/Lab 1")
+df <- read.table(file = "challenger.csv", header = TRUE, sep = ",")
+df
+```
+
+
+```{r}
+describe(df)
+
+```
+
+
+```{r}
+ggplot(df, aes(x = Temp)) +
+  geom_histogram(aes(y = ..density..), binwidth = 1, fill="#0072B2", colour="black") +
+  ggtitle("Temperature") + 
+  theme(plot.title = element_text(lineheight=1, face="bold"))
+
+```
+
+
+```{r}
+
+ggplot(df, aes(factor(O.ring), Temp)) +  
+  geom_boxplot(aes(fill = factor(O.ring))) + 
+  geom_jitter() +
+  ggtitle("Temp by Number of O ring failures") + 
+  theme(plot.title = element_text(lineheight=1, face="bold")) 
+
+```
+```{r}
+plot(Pressure ~ Temp, data = df)
+```
+
+
+```{r}
+
+ggplot(df, aes(factor(Pressure), Temp)) +  
+  geom_boxplot(aes(fill = factor(Pressure))) + 
+  geom_jitter() +
+  ggtitle("Temp by Pressure") + 
+  theme(plot.title = element_text(lineheight=1, face="bold")) 
+
+```
+```{r}
+plot(O.ring ~ Temp, data = df)
+```
+
+
+
+```{r}
+#create a new dataframe that treats each o-ring independently
+df2 <- data.frame(expand.grid(Flight = seq(1, 23, 1), O.ring.label = seq(1, 6, 1), Temp = 0, 
+                   Pressure = 0, O.ring.fail = 0))
+rownames(df2) <- paste(df2$Flight, df2$O.ring.label) #flight + o ring #
+
+for(row in rownames(df2)){
+  fl <- df2[row, ]$Flight
+  
+  df2[row, ]$Temp <- df[df$Flight == fl, ]$Temp # set Temp
+  df2[row, ]$Pressure <- df[df$Flight == fl, ]$Pressure # set Pressure
+  df2[row, ]$O.ring.fail <- ifelse(df2[row, ]$O.ring.label <= 
+                                     df[df$Flight == fl, ]$O.ring, 1, 0)  # set O.ring.fail
+  
+}
+
+df2
+
+```
+
+```{r}
+
+ggplot(df2, aes(factor(O.ring.fail), Temp)) +  
+  geom_boxplot(aes(fill = factor(O.ring.fail))) + 
+  geom_jitter() +
+  ggtitle("Temp by Presence of O-ring failure") + 
+  theme(plot.title = element_text(lineheight=1, face="bold")) 
+
+```
+
+
+```{r}
+model1 <- glm(O.ring.fail ~ Temp + Pressure, data = df2, family = binomial)
+summary(model1)
+```
+
+
+```{r}
+model2 <- glm(O.ring.fail ~ Temp + Pressure + Temp:Pressure, data = df2, family = binomial)
+summary(model2)
+```
+
+```{r}
+model3 <- glm(O.ring.fail ~ Temp, data = df2, family = binomial)
+summary(model3)
+```
+```{r}
+model4 <- glm(O.ring.fail ~ Temp + I(Temp^2), data = df2, family = binomial)
+summary(model4)
+```
+
