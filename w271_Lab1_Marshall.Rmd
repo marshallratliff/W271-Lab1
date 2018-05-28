@@ -141,7 +141,66 @@ summary(model2)
 ```
         Using only a linear predictor on the `Temp` variable for the log-odds of yields an intercept of 5.085 and a coefficient for `Temp` of -0.116, which is significant at the 0.05 level.
         b. (Jessica) Plot
+        
+```{r}
+#pi vs. Temp  ## QUESTION - the books says to plot _pi_ vs temp, not pi hat. I assume they're looking for the latter, though? 
+newdf <- data.frame(Temp = seq(from = 31, to = 81, by = 1))
+
+lp.hat <- predict.glm(model2, newdata = newdf, type = "link", se.fit = TRUE)
+lp.hat.mean <- lp.hat$fit
+pi.hat <- exp(lp.hat.mean) / (1 + exp(lp.hat.mean))
+
+plot(newdf$Temp, pi.hat, ylim = range(c(0,1)),
+     xlab = "Temperature", ylab = "Predicted Prob of single O-ring failure", 
+     main = "Predicted Pi vs. Temperature", type = 'l', col = 'black', lwd = 2)
+
+#expected number of failures vs. Temp
+
+plot(newdf$Temp, pi.hat * 6, ylim = range(c(0,6)),
+     xlab = "Temperature", ylab = "Predicted Number of O-ring failures", 
+     main = "Predicted O-ring Failures vs. Temperature", type = 'l', col = 'blue', lwd = 2)
+
+```
         c. (Jessica) Plot. The bands are wider for lower temperature because there are very few observations in this region.
+        
+
+
+```{r}
+#jeff's way
+lp.hat.lci <- lp.hat$fit - 1.96 * lp.hat$se.fit
+lp.hat.uci <- lp.hat$fit + 1.96 * lp.hat$se.fit
+
+
+pi.hat.lci <- exp(lp.hat.lci) / (1 + exp(lp.hat.lci))
+pi.hat.uci <- exp(lp.hat.uci) / (1 + exp(lp.hat.uci))
+
+### Plot predicted probabilities
+plot(newdf$Temp, pi.hat, ylim = range(c(pi.hat.lci, pi.hat.uci)),
+     xlab = "Temperature", ylab = "Predicted Prob of single O-ring failure", 
+     main= "Predicted Prob of single O-ring failure", type = 'l', col = 'black', lwd = 2)
+lines(newdf$Temp, pi.hat.lci, col = 'red', lwd = 0.5)
+lines(newdf$Temp, pi.hat.uci, col = 'red', lwd = 0.5)
+
+
+
+#book way
+ci.pi <- function(newdata, mod.fit.obj, alpha){
+  linear.pred <- predict(object = mod.fit.obj, newdata = newdata, type = "link", se = TRUE)
+  CI.lin.pred.lower <- linear.pred$fit - qnorm(p = 1-alpha/2)*linear.pred$se
+  CI.lin.pred.upper <- linear.pred$fit + qnorm(p = 1-alpha/2)*linear.pred$se
+  CI.pi.lower <- exp(CI.lin.pred.lower) / (1 + exp(CI.lin.pred.lower))
+  CI.pi.upper <- exp(CI.lin.pred.upper) / (1+ exp(CI.lin.pred.upper))
+  list(lower = CI.pi.lower, upper = CI.pi.upper)
+}
+
+plot(newdf$Temp, pi.hat, ylim = range(c(pi.hat.lci, pi.hat.uci)),
+     xlab = "Temperature", ylab = "Predicted Prob of single O-ring failure", 
+     main= "Predicted Prob of single O-ring failure", type = 'l', col = 'black', lwd = 2)
+curve(expr = ci.pi(newdata = data.frame(Temp = x), mod.fit.obj = model2, alpha = 0.05)$lower, col = "green", lty = "dotdash", add = TRUE, xlim = c(31, 81))
+curve(expr = ci.pi(newdata = data.frame(Temp = x), mod.fit.obj = model2, alpha = 0.05)$upper, col = "green", lty = "dotdash", add = TRUE, xlim = c(31, 81))
+
+```
+
         d. (Alice) Key assumption being made here is that there is a linear relationship between the temperature and the log-likelihood of O-ring failure. It is possible that either assumption is invalid, i.e. the logit is not the proper link-function for this relationship or there is a nonlinear relationship between temperature and the logit of the probability of O-ring failure.
         e.(Marshall) Bootstrap
         f. We include the quadratic term on temperature and run a LRT using the chi-squared distribution to determine if its inclusion is statistically significant, as follow:
