@@ -1,0 +1,18 @@
+---
+title: 'w271 Lab 1: Jessica Hays Fisher, Alice Lam, Marshall Ratliff, Paul Varjan'
+author: "Pv"
+date: "5/20/2018"
+output:
+  pdf_document: default  
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+
+```
+
