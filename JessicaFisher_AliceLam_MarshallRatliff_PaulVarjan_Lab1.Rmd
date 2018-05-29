@@ -1,18 +1,223 @@
 ---
-title: 'w271 Lab 1: Jessica Hays Fisher, Alice Lam, Marshall Ratliff, Paul Varjan'
-author: "Pv"
+title: 'w271 Lab 1: Investigation of the 1989 Space Shuttle Challenger Accident '
+author: "Jessica Hays Fisher, Alice Lam, Marshall Ratliff, Paul Varjan"
 date: "5/20/2018"
-output:
-  pdf_document: default  
-  html_document: default
+output: 
+  pdf_document:
+  toc: true
+  number_sections: true
+fontsize: 11pt
+geometry: margin=1in
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+# Exploratory Data Analysis
+```{r, include=FALSE}
+library(car)
+library(dplyr)
+library(Hmisc)
+library(ggplot2)
+
+df <- read.table(file = "challenger.csv", header = TRUE, sep = ",")
+df
+
+```
+
+## A First Look at the Individual Factors
+```{r}
+
+ggplot(df, aes(x = Temp)) +
+  geom_histogram(aes(y = ..density..), binwidth = 1, fill="#0072B2", colour="black") +
+  ggtitle("Temperature") + 
+  theme(plot.title = element_text(lineheight=1, face="bold"))
+
+ggplot(df, aes(x = Pressure)) +
+  geom_histogram(aes(y = ..density..), binwidth = 1, fill="#0072B2", colour="black") +
+  ggtitle("Pressure") + 
+  theme(plot.title = element_text(lineheight=1, face="bold"))
+
+ggplot(df, aes(x = O.ring)) +
+  geom_histogram(aes(y = ..density..), binwidth = 1, fill="#0072B2", colour="black") +
+  ggtitle("O-Ring Failure") + 
+  theme(plot.title = element_text(lineheight=1, face="bold"))
+
+```
+
+## Basic Summary Data
+```{r}
+summary(df)
+describe(df)
+```
+
+## Relationships Between Time Series
+
+```{r}
+plot(O.ring ~ Temp, data = df)
+
+ggplot(df, aes(factor(O.ring), Temp)) +  
+  geom_boxplot(aes(fill = factor(O.ring))) + 
+  geom_jitter() +
+  ggtitle("Temp by Number of O ring failures") + 
+  theme(plot.title = element_text(lineheight=1, face="bold")) 
+
+plot(Pressure ~ Temp, data = df)
+
+ggplot(df, aes(factor(Pressure), Temp)) +  
+  geom_boxplot(aes(fill = factor(Pressure))) + 
+  geom_jitter() +
+  ggtitle("Temp by Pressure") + 
+  theme(plot.title = element_text(lineheight=1, face="bold")) 
+
+noise <- runif(length(df$Pressure), min=-5, max = 5)
+pressure_noise <- df$Pressure + noise
+plot(pressure_noise, df$O.ring)
+
+```
+
+```{r, include=FALSE}
+#create a new dataframe that treats each o-ring independently
+df2 <- data.frame(expand.grid(Flight = seq(1, 23, 1), O.ring.label = seq(1, 6, 1), Temp = 0, 
+                   Pressure = 0, O.ring.fail = 0))
+rownames(df2) <- paste(df2$Flight, df2$O.ring.label) #flight + o ring #
+
+for(row in rownames(df2)){
+  fl <- df2[row, ]$Flight
+  
+  df2[row, ]$Temp <- df[df$Flight == fl, ]$Temp # set Temp
+  df2[row, ]$Pressure <- df[df$Flight == fl, ]$Pressure # set Pressure
+  df2[row, ]$O.ring.fail <- ifelse(df2[row, ]$O.ring.label <= 
+                                     df[df$Flight == fl, ]$O.ring, 1, 0)  # set O.ring.fail
+  
+}
+
+df2
+
+```
 
 ```{r}
 
+ggplot(df2, aes(factor(O.ring.fail), Temp)) +  
+  geom_boxplot(aes(fill = factor(O.ring.fail))) + 
+  geom_jitter() +
+  ggtitle("Temp by Presence of O-ring failure") + 
+  theme(plot.title = element_text(lineheight=1, face="bold")) 
+
 ```
+
+# Answer to questions 4 and 5 on Chapter 2 (page 129 and 130) of Bilder and Loughin's *"Analysis of Categorical Data with R"*
+
+## 4)
+###        a. The authors assume that for each trial, the probability of failure for each of the 6 O-rings is independent. This is necessary to validate the use of the binomial distribution for the probability of failure. The binomial distribution assumes that the success/failure of each trial is independent, and in this case trials correspond to different O-rings in the same test. If the binomial distribution is not accurate, then this means the interpretation of the logistic regression implying the odds of success/failure for each O-ring is invalid. Conceivably, the failure of one O-ring may contribute to some structural damage that causes other O-rings to fail, violating the independence assumption. On the other side, the success of the primary O-ring may diminish the likelihood of failure of the second O-ring, if it does not experience the same conditions. Furthermore, there may be other variables that influence the quality of the O-rings or their likelihood of failure, for example related to their production, that violates the independence of O-rings on a given flight or different flights.
+###        b. Base model of probability of single O.ring failures modeled on linear relationship of temperature and pressure. In df, we model each observation outcome using the count of O-ring failures, in the `O.ring` var, over the total number of O-rings, in the `Number` var which is always 6, as a binomial random variable. Similarly we check that this is the same as counting each O-ring as its own observation representing a bernoulli random variable with probability representing probability of its failure. These are indeed identical.
+```{r}
+model1.binom <- glm(O.ring/Number ~ Temp + Pressure, data = df, family = binomial,weights=Number)
+model1.bern <- glm(O.ring.fail ~ Temp + Pressure, data = df2, family = binomial)
+summary(model1.binom)
+summary(model1.bern)
+```
+
+###        Thus, we stick with the first as our model1:
+```{r}
+model1 <- glm(O.ring/Number ~ Temp + Pressure, data = df, family = binomial,weights=Number)
+summary(model1)
+```
+
+###        c. We perform likelihood ratio tests using this model as our alternative hypothesis and the two reduced models setting the coeffs for temp and pressure respectively to zero, then conducting the ANOVA tests using the chi-squared distribution as follows:
+```{r}
+ha <- model1
+h0 <- glm(O.ring/Number ~ Pressure, data = df, family = binomial, weights = Number)
+anova(h0, ha, test = "Chisq")
+h0 <- glm(O.ring/Number ~ Temp, data = df, family = binomial, weights = Number)
+anova(h0, ha, test = "Chisq")
+```
+
+###        Thus we see that the inclusion of `Temp` in the model is significant at the alpha=0.05 level, whereas the inclusion of `Pressure` is not even marginally significant. 
+###        d. Given the lack of statistical significance of the pressure variable in the model here it certainly validates the authors decision to remove this variable from the model, however it is also reasonable to suggest that further testing may have still been warranted. It is important to keep in mind that we are assuming that the relationship with pressure is linear here, but some transformation may be relevant here, e.g. a log transformation or a translation given the note in the paper that the puddy covers pressure of 50 PSI and thus it may be that only additional pressure should be considered relevant to O-ring failure.
+##    5)
+###        a. The model on `Temp` alone corresponds to the second `h0` model above:
+```{r}
+model2 <- h0
+summary(model2)
+```
+
+###        Using only a linear predictor on the `Temp` variable for the log-odds of yields an intercept of 5.085 and a coefficient for `Temp` of -0.116, which is significant at the 0.05 level.
+###        b. (Jessica) Plot
+        
+```{r}
+#pi vs. Temp  ## QUESTION - the books says to plot _pi_ vs temp, not pi hat. I assume they're looking for the latter, though? 
+newdf <- data.frame(Temp = seq(from = 31, to = 81, by = 1))
+
+lp.hat <- predict.glm(model2, newdata = newdf, type = "link", se.fit = TRUE)
+lp.hat.mean <- lp.hat$fit
+pi.hat <- exp(lp.hat.mean) / (1 + exp(lp.hat.mean))
+
+plot(newdf$Temp, pi.hat, ylim = range(c(0,1)),
+     xlab = "Temperature", ylab = "Predicted Prob of single O-ring failure", 
+     main = "Predicted Pi vs. Temperature", type = 'l', col = 'black', lwd = 2)
+
+#expected number of failures vs. Temp
+
+plot(newdf$Temp, pi.hat * 6, ylim = range(c(0,6)),
+     xlab = "Temperature", ylab = "Predicted Number of O-ring failures", 
+     main = "Predicted O-ring Failures vs. Temperature", type = 'l', col = 'blue', lwd = 2)
+
+```
+
+###        c. (Jessica) Plot. The bands are wider for lower temperature because there are very few observations in this region.
+        
+```{r}
+#jeff's way
+lp.hat.lci <- lp.hat$fit - 1.96 * lp.hat$se.fit
+lp.hat.uci <- lp.hat$fit + 1.96 * lp.hat$se.fit
+
+
+pi.hat.lci <- exp(lp.hat.lci) / (1 + exp(lp.hat.lci))
+pi.hat.uci <- exp(lp.hat.uci) / (1 + exp(lp.hat.uci))
+
+### Plot predicted probabilities
+plot(newdf$Temp, pi.hat, ylim = range(c(pi.hat.lci, pi.hat.uci)),
+     xlab = "Temperature", ylab = "Predicted Prob of single O-ring failure", 
+     main= "Predicted Prob of single O-ring failure", type = 'l', col = 'black', lwd = 2)
+lines(newdf$Temp, pi.hat.lci, col = 'red', lwd = 0.5)
+lines(newdf$Temp, pi.hat.uci, col = 'red', lwd = 0.5)
+
+
+
+#book way
+ci.pi <- function(newdata, mod.fit.obj, alpha){
+  linear.pred <- predict(object = mod.fit.obj, newdata = newdata, type = "link", se = TRUE)
+  CI.lin.pred.lower <- linear.pred$fit - qnorm(p = 1-alpha/2)*linear.pred$se
+  CI.lin.pred.upper <- linear.pred$fit + qnorm(p = 1-alpha/2)*linear.pred$se
+  CI.pi.lower <- exp(CI.lin.pred.lower) / (1 + exp(CI.lin.pred.lower))
+  CI.pi.upper <- exp(CI.lin.pred.upper) / (1+ exp(CI.lin.pred.upper))
+  list(lower = CI.pi.lower, upper = CI.pi.upper)
+}
+
+plot(newdf$Temp, pi.hat, ylim = range(c(pi.hat.lci, pi.hat.uci)),
+     xlab = "Temperature", ylab = "Predicted Prob of single O-ring failure", 
+     main= "Predicted Prob of single O-ring failure", type = 'l', col = 'black', lwd = 2)
+curve(expr = ci.pi(newdata = data.frame(Temp = x), mod.fit.obj = model2, alpha = 0.05)$lower, col = "green", lty = "dotdash", add = TRUE, xlim = c(31, 81))
+curve(expr = ci.pi(newdata = data.frame(Temp = x), mod.fit.obj = model2, alpha = 0.05)$upper, col = "green", lty = "dotdash", add = TRUE, xlim = c(31, 81))
+
+```
+
+###        d. (Alice) Key assumption being made here is that there is a linear relationship between the temperature and the log-likelihood of O-ring failure. It is possible that either assumption is invalid, i.e. the logit is not the proper link-function for this relationship or there is a nonlinear relationship between temperature and the logit of the probability of O-ring failure.
+###        e.(Marshall) Bootstrap
+###        f. We include the quadratic term on temperature and run a LRT using the chi-squared distribution to determine if its inclusion is statistically significant, as follow:
+```{r}
+model3 <- glm(O.ring/Number ~ Temp + I(Temp^2), data = df, family = binomial, weights = Number)
+summary(model3)
+ha <- model3
+anova(h0, ha, test = "Chisq")
+```
+
+###         The quadratic term addition to the model is not statistically significant, suggesting that either it shouldn't be included or some other variable transformations or terms should be conducted/tested first.
+
+# 3. In addition to the questions in Question 4 and 5, answer the following questions:
+##    a. Interpret the main result of your final model in terms of both odds and probability of failure 
+
+##   b. With the same set of explanatory variables in your final model, estimate a linear regression model. Explain the model results; conduct model diagnostic; and assess the validity of the model assumptions.  Would you use the linear regression model or binary logistic regression in this case.  Why? Or, why not?
 
