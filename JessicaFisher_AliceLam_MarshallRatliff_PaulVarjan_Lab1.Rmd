@@ -2,9 +2,12 @@
 title: 'w271 Lab 1: Investigation of the 1989 Space Shuttle Challenger Accident '
 author: "Jessica Hays Fisher, Alice Lam, Marshall Ratliff, Paul Varjan"
 date: "5/20/2018"
-output:
-  pdf_document: default  
-  html_document: default
+output: 
+  pdf_document:
+  toc: true
+  number_sections: true
+fontsize: 11pt
+geometry: margin=1in
 ---
 
 ```{r setup, include=FALSE}
