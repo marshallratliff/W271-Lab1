@@ -20,13 +20,9 @@ library(car)
 library(dplyr)
 library(Hmisc)
 library(ggplot2)
-library(boot)
 
 df <- read.table(file = "challenger.csv", header = TRUE, sep = ",")
 df
-
-df$bin.Temp <- df$Temp<60
-df$bin.Pressure <- df$Pressure<200
 
 ```
 
@@ -78,12 +74,6 @@ ggplot(df, aes(factor(Pressure), Temp)) +
 noise <- runif(length(df$Pressure), min=-5, max = 5)
 pressure_noise <- df$Pressure + noise
 plot(pressure_noise, df$O.ring)
-
-ggplot(df, aes(factor(O.ring), Pressure)) +  
-  geom_boxplot(aes(fill = factor(O.ring))) + 
-  geom_jitter() +
-  ggtitle("Temp by Number of O ring failures") + 
-  theme(plot.title = element_text(lineheight=1, face="bold")) 
 
 ```
 
@@ -214,7 +204,7 @@ curve(expr = ci.pi(newdata = data.frame(Temp = x), mod.fit.obj = model2, alpha =
 
 ```
 
-###        d. (Alice) Key assumption being made here is that there is a linear relationship between the temperature and the log-likelihood of O-ring failure. It is possible that either assumption is invalid, i.e. the logit is not the proper link-function for this relationship or there is a nonlinear relationship between temperature and the logit of the probability of O-ring failure.
+###        d. 
 ### The temperature was 31  at launch for the Challenger in 1986. Estimate the probability of an O-ring failure using this temperature, and compute a corre- sponding confidence interval. Discuss what assumptions need to be made in order to apply the inference procedures.
 
 ```{r}
@@ -262,6 +252,7 @@ Key assumption being made here is that there is a linear relationship between th
 ### And so we recommend the following. So when it comes to calculating confidence intervals, we recommend that we first calculate a Wald interval. And then we calculate a profile likelihood ratio interval using the mcprofile package.
 
 ### And as long as the profile likelihood ratio interval not too far away from the Wald interval, we recommend reporting the profile likelihood ration interval.
+
 ###        e.(Marshall) Bootstrap
 ###        f. We include the quadratic term on temperature and run a LRT using the chi-squared distribution to determine if its inclusion is statistically significant, as follow:
 ```{r}
