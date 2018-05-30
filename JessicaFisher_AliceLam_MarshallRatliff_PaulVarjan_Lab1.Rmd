@@ -21,12 +21,10 @@ library(dplyr)
 library(Hmisc)
 library(ggplot2)
 library(boot)
+library(mcprofile)
 
 df <- read.table(file = "challenger.csv", header = TRUE, sep = ",")
 df
-
-df$bin.Temp <- df$Temp<60
-df$bin.Pressure <- df$Pressure<200
 
 ```
 
@@ -239,7 +237,6 @@ CI.pi <- exp(CI.pred31)/(1 + exp(CI.pred31))
 data.frame(predict.data, pi.hat31, lower = CI.pi[1], upper = CI.pi[2])
 
 # Profile Likelihood Ratio Interval
-library(mcprofile)
 K <- matrix(data = c(1,31), nrow = 1, ncol = 2)
 model2.combo <- mcprofile(object = model2, CM = K)
 ci.logit.profile <- confint(object = model2.combo, level = 0.95)
