@@ -271,6 +271,15 @@ ha <- model3
 anova(h0, ha, test = "Chisq")
 ```
 
+# Testing other Models before moving on
+## Temp and Pressure with an Interaction term - an interaction term does not help improve the model.
+
+```{r}
+model2 <- glm(O.ring/Number ~ Temp + Pressure + Temp:Pressure, data = df, family = binomial, weights = Number)
+summary(model2)
+```
+
+
 ###         The quadratic term addition to the model is not statistically significant, suggesting that either it shouldn't be included or some other variable transformations or terms should be conducted/tested first.
 
 # 3. In addition to the questions in Question 4 and 5, answer the following questions:
