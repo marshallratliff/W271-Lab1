@@ -20,8 +20,11 @@ library(car)
 library(dplyr)
 library(Hmisc)
 library(ggplot2)
-library(boot)
 library(mcprofile)
+library(gridExtra)  
+# gridExtra is an extension of the standard library grid, which permits more straightforward 
+# use of grid features.  We especially use it for grid.arrange() which allows related plots to be
+# displayed together.  We use this for clarity and brevity's sake.
 
 df <- read.table(file = "challenger.csv", header = TRUE, sep = ",")
 df
@@ -29,59 +32,72 @@ df
 ```
 
 ## A First Look at the Individual Factors
-```{r}
+```{r fig.dim=c(8,3)}
 
-ggplot(df, aes(x = Temp)) +
+temp.plt <- ggplot(df, aes(x = Temp)) +
   geom_histogram(aes(y = ..density..), binwidth = 1, fill="#0072B2", colour="black") +
   ggtitle("Temperature") + 
   theme(plot.title = element_text(lineheight=1, face="bold"))
 
-ggplot(df, aes(x = Pressure)) +
+pres.plt <- ggplot(df, aes(x = Pressure)) +
   geom_histogram(aes(y = ..density..), binwidth = 1, fill="#0072B2", colour="black") +
   ggtitle("Pressure") + 
   theme(plot.title = element_text(lineheight=1, face="bold"))
 
-ggplot(df, aes(x = O.ring)) +
+oring.plt <- ggplot(df, aes(x = O.ring)) +
   geom_histogram(aes(y = ..density..), binwidth = 1, fill="#0072B2", colour="black") +
   ggtitle("O-Ring Failure") + 
   theme(plot.title = element_text(lineheight=1, face="bold"))
+
+grid.arrange(temp.plt, pres.plt, oring.plt, ncol=3)
 
 ```
 
 ## Basic Summary Data
 ```{r}
 summary(df)
-describe(df)
+# describe(df) # too long to fit everything else
 ```
 
 ## Relationships Between Time Series
 
-```{r}
-plot(O.ring ~ Temp, data = df)
+```{r fig.dim=c(8,2.5)}
 
-ggplot(df, aes(factor(O.ring), Temp)) +  
+otemp.plt <- ggplot(df, aes(Temp, factor(O.ring))) + geom_point(color="firebrick") 
+# was plot(O.ring ~ Temp, data = df)
+
+otemp.box <- ggplot(df, aes(factor(O.ring), Temp)) +  
   geom_boxplot(aes(fill = factor(O.ring))) + 
-  geom_jitter() +
+  geom_jitter() + guides(fill=FALSE) +
   ggtitle("Temp by Number of O ring failures") + 
   theme(plot.title = element_text(lineheight=1, face="bold")) 
 
-plot(Pressure ~ Temp, data = df)
+grid.arrange(otemp.plt, otemp.box, ncol=2)
 
-ggplot(df, aes(factor(Pressure), Temp)) +  
+tpres.plt <- ggplot(df, aes(Temp, factor(Pressure))) + geom_point(color="darkseagreen") 
+# was plot(Pressure ~ Temp, data = df)
+
+tpres.box <- ggplot(df, aes(factor(Pressure), Temp)) +  
   geom_boxplot(aes(fill = factor(Pressure))) + 
-  geom_jitter() +
+  geom_jitter() + guides(fill=FALSE) +
   ggtitle("Temp by Pressure") + 
   theme(plot.title = element_text(lineheight=1, face="bold")) 
 
-noise <- runif(length(df$Pressure), min=-5, max = 5)
-pressure_noise <- df$Pressure + noise
-plot(pressure_noise, df$O.ring)
+grid.arrange(tpres.plt, tpres.box, ncol=2)
 
-ggplot(df, aes(factor(O.ring), Pressure)) +  
+
+noise <- runif(length(df$Pressure), min=-8, max = 8)
+pressure_noise <- df$Pressure + noise
+opres.plt <- ggplot(df, aes(pressure_noise, factor(O.ring))) + geom_point(color="chartreuse4") 
+# was opres.plt <- plot(pressure_noise, df$O.ring)
+
+opres.box <- ggplot(df, aes(factor(O.ring), Pressure)) +  
   geom_boxplot(aes(fill = factor(O.ring))) + 
-  geom_jitter() +
+  geom_jitter() + guides(fill=FALSE) +
   ggtitle("Temp by Number of O ring failures") + 
   theme(plot.title = element_text(lineheight=1, face="bold")) 
+
+grid.arrange(opres.plt, opres.box, ncol=2)
 
 ```
 
@@ -105,11 +121,11 @@ df2
 
 ```
 
-```{r}
+```{r fig.dim=c(8,3)}
 
 ggplot(df2, aes(factor(O.ring.fail), Temp)) +  
   geom_boxplot(aes(fill = factor(O.ring.fail))) + 
-  geom_jitter() +
+  geom_jitter() + guides(fill=FALSE) +
   ggtitle("Temp by Presence of O-ring failure") + 
   theme(plot.title = element_text(lineheight=1, face="bold")) 
 
@@ -121,7 +137,8 @@ ggplot(df2, aes(factor(O.ring.fail), Temp)) +
 ###        a. The authors assume that for each trial, the probability of failure for each of the 6 O-rings is independent. This is necessary to validate the use of the binomial distribution for the probability of failure. The binomial distribution assumes that the success/failure of each trial is independent, and in this case trials correspond to different O-rings in the same test. If the binomial distribution is not accurate, then this means the interpretation of the logistic regression implying the odds of success/failure for each O-ring is invalid. Conceivably, the failure of one O-ring may contribute to some structural damage that causes other O-rings to fail, violating the independence assumption. On the other side, the success of the primary O-ring may diminish the likelihood of failure of the second O-ring, if it does not experience the same conditions. Furthermore, there may be other variables that influence the quality of the O-rings or their likelihood of failure, for example related to their production, that violates the independence of O-rings on a given flight or different flights.
 ###        b. Base model of probability of single O.ring failures modeled on linear relationship of temperature and pressure. In df, we model each observation outcome using the count of O-ring failures, in the `O.ring` var, over the total number of O-rings, in the `Number` var which is always 6, as a binomial random variable. Similarly we check that this is the same as counting each O-ring as its own observation representing a bernoulli random variable with probability representing probability of its failure. These are indeed identical.
 ```{r}
-model1.binom <- glm(O.ring/Number ~ Temp + Pressure, data = df, family = binomial,weights=Number)
+model1.binom <- glm(O.ring/Number ~ Temp + Pressure, data = df, family = binomial, 
+                    weights=Number)
 model1.bern <- glm(O.ring.fail ~ Temp + Pressure, data = df2, family = binomial)
 summary(model1.binom)
 summary(model1.bern)
@@ -129,7 +146,8 @@ summary(model1.bern)
 
 ###        Thus, we stick with the first as our model1:
 ```{r}
-model1 <- glm(O.ring/Number ~ Temp + Pressure, data = df, family = binomial,weights=Number)
+model1 <- glm(O.ring/Number ~ Temp + Pressure, data = df, family = binomial, 
+              weights=Number)
 summary(model1)
 ```
 
@@ -152,10 +170,11 @@ summary(model2)
 ```
 
 ###        Using only a linear predictor on the `Temp` variable for the log-odds of yields an intercept of 5.085 and a coefficient for `Temp` of -0.116, which is significant at the 0.05 level.
-###        b. (Jessica) Plot
+###        b. Plot
         
-```{r}
-#pi vs. Temp  ## QUESTION - the books says to plot _pi_ vs temp, not pi hat. I assume they're looking for the latter, though? 
+```{r fig.dim=c(6, 3)}
+# pi vs. Temp  ## QUESTION - the books says to plot _pi_ vs temp, not pi hat. I 
+# assume they're looking for the latter, though? 
 newdf <- data.frame(Temp = seq(from = 31, to = 81, by = 1))
 
 lp.hat <- predict.glm(model2, newdata = newdf, type = "link", se.fit = TRUE)
@@ -170,13 +189,14 @@ plot(newdf$Temp, pi.hat, ylim = range(c(0,1)),
 
 plot(newdf$Temp, pi.hat * 6, ylim = range(c(0,6)),
      xlab = "Temperature", ylab = "Predicted Number of O-ring failures", 
-     main = "Predicted O-ring Failures vs. Temperature", type = 'l', col = 'blue', lwd = 2)
+     main = "Predicted O-ring Failures vs. Temperature", type = 'l', col = 'blue', 
+     lwd = 2)
 
 ```
 
-###        c. (Jessica) Plot. The bands are wider for lower temperature because there are very few observations in this region.
+###        c. Plot. The bands are wider for lower temperature because there are very few observations in this region.
         
-```{r}
+```{r fig.dim=c(6, 3)}
 #jeff's way
 lp.hat.lci <- lp.hat$fit - 1.96 * lp.hat$se.fit
 lp.hat.uci <- lp.hat$fit + 1.96 * lp.hat$se.fit
@@ -188,7 +208,8 @@ pi.hat.uci <- exp(lp.hat.uci) / (1 + exp(lp.hat.uci))
 ### Plot predicted probabilities
 plot(newdf$Temp, pi.hat, ylim = range(c(pi.hat.lci, pi.hat.uci)),
      xlab = "Temperature", ylab = "Predicted Prob of single O-ring failure", 
-     main= "Predicted Prob of single O-ring failure", type = 'l', col = 'black', lwd = 2)
+     main= "Predicted Prob of single O-ring failure", type = 'l', col = 'black', 
+     lwd = 2)
 lines(newdf$Temp, pi.hat.lci, col = 'red', lwd = 0.5)
 lines(newdf$Temp, pi.hat.uci, col = 'red', lwd = 0.5)
 
@@ -196,7 +217,8 @@ lines(newdf$Temp, pi.hat.uci, col = 'red', lwd = 0.5)
 
 #book way
 ci.pi <- function(newdata, mod.fit.obj, alpha){
-  linear.pred <- predict(object = mod.fit.obj, newdata = newdata, type = "link", se = TRUE)
+  linear.pred <- predict(object = mod.fit.obj, newdata = newdata, type = "link", 
+                         se = TRUE)
   CI.lin.pred.lower <- linear.pred$fit - qnorm(p = 1-alpha/2)*linear.pred$se
   CI.lin.pred.upper <- linear.pred$fit + qnorm(p = 1-alpha/2)*linear.pred$se
   CI.pi.lower <- exp(CI.lin.pred.lower) / (1 + exp(CI.lin.pred.lower))
@@ -206,13 +228,16 @@ ci.pi <- function(newdata, mod.fit.obj, alpha){
 
 plot(newdf$Temp, pi.hat, ylim = range(c(pi.hat.lci, pi.hat.uci)),
      xlab = "Temperature", ylab = "Predicted Prob of single O-ring failure", 
-     main= "Predicted Prob of single O-ring failure", type = 'l', col = 'black', lwd = 2)
-curve(expr = ci.pi(newdata = data.frame(Temp = x), mod.fit.obj = model2, alpha = 0.05)$lower, col = "green", lty = "dotdash", add = TRUE, xlim = c(31, 81))
-curve(expr = ci.pi(newdata = data.frame(Temp = x), mod.fit.obj = model2, alpha = 0.05)$upper, col = "green", lty = "dotdash", add = TRUE, xlim = c(31, 81))
+     main= "Predicted Prob of single O-ring failure", type = 'l', col = 'black', 
+     lwd = 2)
+curve(expr = ci.pi(newdata = data.frame(Temp = x), mod.fit.obj = model2, 
+                   alpha = 0.05)$lower, col = "green", lty = "dotdash", add = TRUE, xlim = c(31, 81))
+curve(expr = ci.pi(newdata = data.frame(Temp = x), mod.fit.obj = model2, 
+                   alpha = 0.05)$upper, col = "green", lty = "dotdash", add = TRUE, xlim = c(31, 81))
 
 ```
 
-###        d. (Alice) Key assumption being made here is that there is a linear relationship between the temperature and the log-likelihood of O-ring failure. It is possible that either assumption is invalid, i.e. the logit is not the proper link-function for this relationship or there is a nonlinear relationship between temperature and the logit of the probability of O-ring failure.
+###        d. Key assumption being made here is that there is a linear relationship between the temperature and the log-likelihood of O-ring failure. It is possible that either assumption is invalid, i.e. the logit is not the proper link-function for this relationship or there is a nonlinear relationship between temperature and the logit of the probability of O-ring failure.
 ### The temperature was 31  at launch for the Challenger in 1986. Estimate the probability of an O-ring failure using this temperature, and compute a corre- sponding confidence interval. Discuss what assumptions need to be made in order to apply the inference procedures.
 
 ```{r}
@@ -244,13 +269,12 @@ ci.logit.profile <- confint(object = model2.combo, level = 0.95)
 exp(ci.logit.profile$confint)/(1 + exp(ci.logit.profile$confint))
 ```
 
-### (Alice) 
+### At temperature of 31, the model predicted that the probability of O-ring failure is 0.8178. The 95% Wald interval for $\pi$ is 0.1596 < $\pi$ < 0.9907. Since we have only 23 data points, which is < 40, Wald CI generally does not work well. We therefore also check the profile likelihood ratio interval, the 95% interval for $\pi$ is 0.1419 < $\pi$ < 0.9905. Despite small sample size, the profile likelihood ratio interval is not too far away from the Wald interval, thus we opt to report the profile likelihood ratio interval. 
 
-At temperature of 31, the model predicted that the probability of O-ring failure is 0.8178. The 95% Wald interval for $\pi$ is 0.1596 < $\pi$ < 0.9907. Since we have only 23 data points, which is < 40, Wald CI generally does not work well. We therefore also check the profile likelihood ratio interval, the 95% interval for $\pi$ is 0.1419 < $\pi$ < 0.9905. Despite small sample size, the profile likelihood ratio interval is not too far away from the Wald interval, thus we opt to report the profile likelihood ratio interval. 
-
-Key assumption being made here is that there is a linear relationship between the temperature and the log-likelihood of O-ring failure. It is possible that either assumption is invalid, i.e. the logit is not the proper link-function for this relationship or there is a nonlinear relationship between temperature and the logit of the probability of O-ring failure. As the range of data we have for Temp is only 28 degrees (from 53 to 81), 31 degree is 22 degree lower than the minimum Temp we observe, which is almost as far away as the range of data we observe. A slightly non-linear relationship may not be as obvious with a range of 28 degrees difference, but at 31 degree the deviance from linear relationship would be much more prominent. 
+### Key assumption being made here is that there is a linear relationship between the temperature and the log-likelihood of O-ring failure. It is possible that either assumption is invalid, i.e. the logit is not the proper link-function for this relationship or there is a nonlinear relationship between temperature and the logit of the probability of O-ring failure. As the range of data we have for Temp is only 28 degrees (from 53 to 81), 31 degree is 22 degree lower than the minimum Temp we observe, which is almost as far away as the range of data we observe. A slightly non-linear relationship may not be as obvious with a range of 28 degrees difference, but at 31 degree the deviance from linear relationship would be much more prominent. 
 
 
+CAN BE REMOVED
 ### From Async:
 ### So we have learned that the Wald confidence intervals do not necessarily perform well. And so we want to estimate a profile likelihood ration interval, as well. However, computationally, the profile value ratio is a lot more difficult, because it involves a large number of parameters.
 
@@ -259,10 +283,59 @@ Key assumption being made here is that there is a linear relationship between th
 ### And so we recommend the following. So when it comes to calculating confidence intervals, we recommend that we first calculate a Wald interval. And then we calculate a profile likelihood ratio interval using the mcprofile package.
 
 ### And as long as the profile likelihood ratio interval not too far away from the Wald interval, we recommend reporting the profile likelihood ration interval.
-###        e.(Marshall) Bootstrap
+###        e. Bootstrap
+```{r}
+#define sigmoid function for computing values of pi
+sigmoid = function(x) {
+   1 / (1 + exp(-x))
+}
+
+#start with the parameter estimates from our model and our Temp data
+beta0 = model2$coefficients[1]
+beta1 = model2$coefficients[2]
+x <- df$Temp
+pi <- sigmoid(beta0 + beta1*x)
+weights <- df$Number
+
+#simulate new O.ring failure counts to estimate new model parameters
+sim <- function(){
+  #simulate new O.ring failure counts as binomial random variable with n=6 
+  #trials and p=pi probability of success
+  y <- rbinom(n = length(x), size = 6, prob = pi)
+
+  #fit a new regression model on the simulated O.ring failure counts
+  mod.fit <- glm(y/weights ~ x, family = binomial, weights = weights)
+  beta0.star = mod.fit$coefficients[1]
+  beta1.star = mod.fit$coefficients[2]
+
+  #use new model to compute predicted probability of O.ring failure at Temp = 31 
+  #and 72 degrees
+  pi_star.31degrees <- sigmoid(beta0.star + beta1.star*31)
+  pi_star.72degrees <- sigmoid(beta0.star + beta1.star*72)
+  return(c(pi_star.31degrees,pi_star.72degrees))
+}
+
+#run simulation 10000 times
+n=10000
+sim_vals <- replicate(n,sim())
+
+#plot distribution of computed pi values and return the 90% conf interval for 
+#Temp = 31 degrees
+hist(sim_vals[1,], freq = T, xlab = "Probability of O-ring Failure", 
+     main = "Histogram of 10000 Estimates of Probability of O-ring Failure at 31 Degrees")
+quantile(sim_vals[1,],c(0.05,0.95))
+
+#plot distribution of computed pi values and return the 90% conf interval for 
+#Temp = 72 degrees
+hist(sim_vals[2,], freq = T, xlab = "Probability of O-ring Failure", 
+     main = "Histogram of 10000 Estimates of Probability of O-ring Failure at 72 Degrees")
+quantile(sim_vals[2,],c(0.05,0.95))
+```
+
 ###        f. We include the quadratic term on temperature and run a LRT using the chi-squared distribution to determine if its inclusion is statistically significant, as follow:
 ```{r}
-model3 <- glm(O.ring/Number ~ Temp + I(Temp^2), data = df, family = binomial, weights = Number)
+model3 <- glm(O.ring/Number ~ Temp + I(Temp^2), data = df, family = binomial, 
+              weights = Number)
 summary(model3)
 ha <- model3
 anova(h0, ha, test = "Chisq")
@@ -272,7 +345,8 @@ anova(h0, ha, test = "Chisq")
 ## Temp and Pressure with an Interaction term - an interaction term does not help improve the model.
 
 ```{r}
-model2 <- glm(O.ring/Number ~ Temp + Pressure + Temp:Pressure, data = df, family = binomial, weights = Number)
+model2 <- glm(O.ring/Number ~ Temp + Pressure + Temp:Pressure, data = df, 
+              family = binomial, weights = Number)
 summary(model2)
 ```
 
@@ -282,5 +356,71 @@ summary(model2)
 # 3. In addition to the questions in Question 4 and 5, answer the following questions:
 ##    a. Interpret the main result of your final model in terms of both odds and probability of failure 
 
+```{r}
+
+df$bin.Temp = df$Temp<65
+model4 <- glm(O.ring/Number ~ bin.Temp, data = df, family = binomial, 
+              weights = Number)
+summary(model4)
+
+exp(1.9792)
+exp(-0.1156)
+
+```
+
+### After eliminating other potential covariates like order of launch, pressure, cross terms, square terms and log terms, we tested one more thing.  Using a visual cue from the original Temp vs. failure chart in the EDA, we replaced the continuous variable Temp with a binary variable Temp<65.  Our coefficient for the binary variable had an estimate of 1.9792, and while it had a relatively large standard error, was still highly significant. Exp(1.9792) = 7.327, which means that if the temperature is below the 65 degree threshold a failure is 6.327 times as likely to occur as it would if the temperature is above the 65 degree threshold.  This is a nice tidy answer, is reflective of our observations in EDA and has a great p-value but it reeks of p-hacking, and it would not be robust to further declining temperatures.
+### As a result it is ultimately best to go back to the basic O.ring ~ Temp single factor, loglinear(is this accurate?) regression model.  That model is not as dramatic in terms of statistical significance but is still around a 95% confidence level and is far less forced. It implies that with every one degree increase in temperature the likelihood of an o-ring failure decreases 11% from what it was, and vice versa.  
+
 ##   b. With the same set of explanatory variables in your final model, estimate a linear regression model. Explain the model results; conduct model diagnostic; and assess the validity of the model assumptions.  Would you use the linear regression model or binary logistic regression in this case.  Why? Or, why not?
 
+THESE ARE MODELS FROM OTHER .RMD FILES JUST TO PREVENT LOSS OF USEFUL THINGS - SOME OF THESE DONT RUN
+
+```{r}
+df$bin.Temp = df$Temp<67
+model4 <- glm(O.ring/Number ~ bin.Temp, data = df, family = binomial, 
+              weights = Number)
+summary(model4)
+
+df$bin.Temp = df$Temp<65
+model4 <- glm(O.ring/Number ~ bin.Temp, data = df, family = binomial, 
+              weights = Number)
+summary(model4)
+
+exp(1.9792)
+exp(-0.1156)
+```
+
+```{r}
+#pi vs. Temp  ## QUESTION - the books says to plot _pi_ vs temp, not pi hat. I 
+#assume they're looking for the latter, though? 
+newdf <- data.frame(bin.Temp = c(TRUE,F))
+
+lp.hat <- predict.glm(model4, newdata = newdf, type = "link", se.fit = TRUE)
+lp.hat.mean <- lp.hat$fit
+pi.hat <- exp(lp.hat.mean) / (1 + exp(lp.hat.mean))
+
+plot(newdf$bin.Temp, pi.hat, ylim = range(c(0,1)),
+     xlab = "Binned Temperature", ylab = "Predicted Prob of single O-ring failure", 
+     main = "Predicted Pi vs. Temperature", type = 'l', col = 'black', lwd = 2)
+
+#expected number of failures vs. Temp
+
+plot(newdf$bin.Temp, pi.hat * 6, ylim = range(c(0,6)),
+     xlab = "Binned Temperature", ylab = "Predicted Number of O-ring failures", 
+     main = "Predicted O-ring Failures vs. Temperature", type = 'l', col = 'blue', 
+     lwd = 2)
+```
+
+#```{r}
+model4 <- glm(O.ring/Number ~ Temp + log.Pressure, data = df, family = binomial, weights = Number)
+summary(model4)
+ha <- model4
+anova(h0, ha, test = "Chisq")
+```
+
+#```{r}
+model4 <- glm(O.ring/Number ~ Temp + translate.Pressure, data = df, family = binomial, weights = Number)
+summary(model4)
+ha <- model4
+anova(h0, ha, test = "Chisq")
+```
