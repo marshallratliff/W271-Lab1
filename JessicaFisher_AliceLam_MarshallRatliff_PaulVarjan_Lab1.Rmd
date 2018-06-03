@@ -18,7 +18,6 @@ linespace: single
 knitr::opts_chunk$set(echo = TRUE)
 ```
 ```{r echo=TRUE, message=FALSE}
-
 library(car)
 library(dplyr)
 library(Hmisc)
@@ -30,15 +29,14 @@ library(gridExtra)
 # displayed together.  We use this for clarity and brevity's sake.
 
 df <- read.table(file = "challenger.csv", header = TRUE, sep = ",")
-
 ```
 
 ## Introduction
-Given the data set from the Space Shuttle Challenger, we have been asked to infer and test various models to find a good predictor of O-ring failure. We then are asked to choose a preferred model based on the analysis and use the same explanatory variables in a linear (rather then logistic) regression model. A very simple logistic regression model *logit = equation* is determined to be the most explanatory and parsimonious given the data After some analysis of the linear regression version of our chosen model, we determine that logistic regression is more appropriate given the example violates some of the basic conditions requred for linear regression to be effective.
+Given the data set from the Space Shuttle Challenger, we have been asked to infer and test various models to find a good predictor of O-ring failure. We then are asked to choose a preferred model based on the analysis and use the same explanatory variables in a linear (rather then logistic) regression model. A very simple logistic regression model *logit = equation* is determined to be the most explanatory and parsimonious given the data. After some analysis of the linear regression version of our chosen model, we determine that logistic regression is more appropriate given the example violates some of the basic conditions requred for linear regression to be effective.
 
 ## Exploratory Data Analysis
 ### First - A Look at the Individual Factors: Explanatory variables Pressure and Temperature, Response variable O.ring
-There are 23 observations of launches across temperatures ranging from 51F to 81F. There are three pressure levels: 50, 100, and 200. We learned that the putty alone can withstand pressure of 50psi, thus actual pressure exerted on the O-ring were 0, 50, 150.  7 launches resulted in O-ring failure: 5 with 1 O-ring failure, and 2 with 2 O-ring failures for a total of 9 O-ring failures.  There are no missing values in the data provided, and no evidence of invalidly coded values (like 999).
+There are 23 observations of launches across temperatures ranging from 51F to 81F; only four temperatures were observed more than once. There are three pressure levels: 50, 100, and 200. We learned that the putty alone can withstand pressure of 50psi, thus actual pressure exerted on the O-ring were 0, 50, 150.  7 launches resulted in O-ring failure: 5 with 1 O-ring failure, and 2 with 2 O-ring failures for a total of 9 O-ring failures.  There are no missing values in the data provided, and no evidence of invalidly coded values (like 999).
 ```{r fig.dim=c(8,2.5)}
 temp.plt <- ggplot(df, aes(x = Temp)) +
   geom_histogram(aes(y = ..density..), binwidth = 1, fill="#0072B2", colour="black") +
@@ -64,61 +62,48 @@ summary(df[c("Temp", "Pressure", "O.ring")]) #the only series that provide some 
 ### Relationships Between Time Series
 There appear to be disproportionately more O-ring failures at lower temperatures. Note that all launches below 65F experienced at least 1 O-ring failure.  There is no obvious visual interaction between the launch temperature and the psi level used in the pre-launch pressure test.  There is also no apparent relationship between pressure and O-ring failure based on visual inspection.
 ```{r fig.dim=c(8,2.5)}
+#Temp vs. O-ring Failures plots
 otemp.plt <- ggplot(df, aes(Temp, factor(O.ring))) + geom_point(color="firebrick") 
-
 otemp.box <- ggplot(df, aes(factor(O.ring), Temp)) +  
   geom_boxplot(aes(fill = factor(O.ring))) + geom_jitter() + 
   guides(fill=FALSE) + ggtitle("Temp by Number of O-ring failures") + 
   theme(plot.title = element_text(lineheight=1, face="bold")) 
-
 grid.arrange(otemp.plt, otemp.box, ncol=2)
 
+#Temp vs. Pressure plots
 tpres.plt <- ggplot(df, aes(Temp, factor(Pressure))) + geom_point(color="darkseagreen") 
-
 tpres.box <- ggplot(df, aes(factor(Pressure), Temp)) +  
   geom_boxplot(aes(fill = factor(Pressure))) + 
-  geom_jitter() + guides(fill=FALSE) +  ggtitle("Temp by Pressure") + 
+  geom_jitter() + guides(fill=FALSE) +  ggtitle("Temperature by Pressure") + 
   theme(plot.title = element_text(lineheight=1, face="bold")) 
-
 grid.arrange(tpres.plt, tpres.box, ncol=2)
 
+#Pressure vs. O-ring failure plots
 noise <- runif(length(df$Pressure), min=-8, max = 8)
 pressure_noise <- df$Pressure + noise
 opres.plt <- ggplot(df, aes(pressure_noise, factor(O.ring))) + geom_point(color="chartreuse4") 
-
 opres.box <- ggplot(df, aes(factor(O.ring), Pressure)) +  
   geom_boxplot(aes(fill = factor(O.ring))) + geom_jitter() + guides(fill=FALSE) +
   ggtitle("Pressure by O-ring failures per Flight") + 
   theme(plot.title = element_text(lineheight=1, face="bold")) 
-
 grid.arrange(opres.plt, opres.box, ncol=2)
 ```
 
 ### Treating each O-ring as an Independent Observation
-```{r}
+```{r fig.dim=c(8,3)}
 #create a new dataframe that treats each O-ring independently
 df2 <- data.frame(expand.grid(Flight = seq(1, 23, 1), O.ring.label = seq(1, 6, 1), Temp = 0, 
-                   Pressure = 0, O.ring.fail = 0))
-rownames(df2) <- paste(df2$Flight, df2$O.ring.label) #flight + O-ring #
-
+                              O.ring.fail = 0))
 for(row in rownames(df2)){
   fl <- df2[row, ]$Flight
-  
   df2[row, ]$Temp <- df[df$Flight == fl, ]$Temp # set Temp
-  df2[row, ]$Pressure <- df[df$Flight == fl, ]$Pressure # set Pressure
   df2[row, ]$O.ring.fail <- ifelse(df2[row, ]$O.ring.label <= 
                                      df[df$Flight == fl, ]$O.ring, 1, 0)  # set O.ring.fail
-  
 }
-```
-
-```{r fig.dim=c(8,3)}
-
 ggplot(df2, aes(factor(O.ring.fail), Temp)) +  
   geom_boxplot(aes(fill = factor(O.ring.fail))) + geom_jitter() + 
   guides(fill=FALSE) + ggtitle("Temp by Individual O-ring failure") + 
   theme(plot.title = element_text(lineheight=1, face="bold")) 
-
 ```
 
 ## Answer to questions 4 and 5 on Chapter 2 (page 129 and 130) of Bilder and Loughin's *"Analysis of Categorical Data with R"*
@@ -128,7 +113,7 @@ The authors assume the probability of failure for each of the 6 O-rings is indep
 ```{r}
 model1 <- glm(O.ring/Number ~ Temp + Pressure, data = df, family = binomial, 
               weights=Number)
-summary(model1)
+summary(model1)$coefficients
 ```
 
 ### Q4c. *Perform likelihood ration tests to judge the importance of the explanatory variables.*
@@ -148,14 +133,13 @@ The lack of statistical significance of the pressure variable in the model above
 The model on `Temp` alone corresponds to the second `h0` model above. Using only a linear predictor on the `Temp` variable for the log-odds of yields an intercept of 5.085 and a coefficient for `Temp` of -0.116, which is significant at the 0.05 level.
 ```{r}
 model2 <- h0
-summary(model2)
+summary(model2)$coefficients
 ```
 
 ### Q5b. *Plot (1) pi vs. Temp and (2) Expected number of failutre vs. Temp.*
 ```{r fig.dim=c(4, 3)}
-# pi_hat vs. Temp
 newdf <- data.frame(Temp = seq(from = 31, to = 81, by = 1)) #x-values to graph
-
+## pi_hat vs. Temp
 #calculate predicted values at each temp
 lp.hat <- predict.glm(model2, newdata = newdf, type = "link", se.fit = TRUE)
 lp.hat.mean <- lp.hat$fit
@@ -172,7 +156,7 @@ n <- aggregate(formula = O.ring/Number ~ Temp, data = df, FUN = length)
 symbols(x = w$Temp, y = (w$"O.ring/Number")/(n$"O.ring/Number"), 
         circles = n$"O.ring/Number", inches = 0.1, add = TRUE)
 
-#expected number of failures vs. Temp
+## expected number of failures vs. Temp
 plot(newdf$Temp, pi.hat * 6, ylim = range(c(0,6)),
      xlab = "Temperature", ylab = "Pred # of O-ring fails", 
      main = "Pred O-ring Fails vs. Temp", type = 'l', col = 'blue', 
@@ -202,8 +186,8 @@ curve(expr = ci.pi(newdata = data.frame(Temp = x), mod.fit.obj = model2,
                    alpha = 0.05)$lower, col = "green", lty = "dotdash", add = TRUE, xlim = c(31, 81))
 curve(expr = ci.pi(newdata = data.frame(Temp = x), mod.fit.obj = model2, 
                    alpha = 0.05)$upper, col = "green", lty = "dotdash", add = TRUE, xlim = c(31, 81))
-symbols(x = w$Temp, y = (w$"O.ring/Number")/(n$"O.ring/Number"), circles = n$"O.ring/Number", inches = 0.1, add = TRUE)
-
+symbols(x = w$Temp, y = (w$"O.ring/Number")/(n$"O.ring/Number"), circles = n$"O.ring/Number", 
+        inches = 0.1, add = TRUE)
 ```
 
 ### Q5d. *Estimate the probability of an O-ring failure at 31F, compare to the confidence interval, and discuss assumptions to apply the inference procedures*
@@ -212,36 +196,25 @@ The Key assumption being made is that there is a linear relationship between the
 ```{r}
 # Prob(failure) ~ temp = 31
 model2.pred31 <- model2$coefficients[1] + model2$coefficients[2]*31
-model2.pred31
-exp(model2.pred31)/(1+exp(model2.pred31))
-
-# Another way to do it
-predict.data<-data.frame(Temp=31)
-predict(object = model2, newdata = predict.data, type = "link")
-predict(object = model2, newdata = predict.data, type = "response")
 
 # Wald CI
 pred31 <- predict(object = model2, newdata = predict.data, type = "link", se = TRUE)
-pred31
 pi.hat31 <- exp(pred31$fit) / (1 + exp(pred31$fit))
 alpha <- 0.05
 CI.pred31 <- pred31$fit + qnorm(p = c(alpha/2, 1-alpha/2))* pred31$se
 CI.pi <- exp(CI.pred31)/(1 + exp(CI.pred31))
-#CI.pi
 data.frame(predict.data, pi.hat31, lower = CI.pi[1], upper = CI.pi[2])
 
 # Profile Likelihood Ratio Interval
 K <- matrix(data = c(1,31), nrow = 1, ncol = 2)
 model2.combo <- mcprofile(object = model2, CM = K)
 ci.logit.profile <- confint(object = model2.combo, level = 0.95)
-#ci.logit.profile
 exp(ci.logit.profile$confint)/(1 + exp(ci.logit.profile$confint))
 ```
 
 ### Q5e. *Use a parametric bootstrap to compute the 90% c.i. at 31F and 72F.*
 At temperature of 31, the parametric bootstrapped 90% confidence interval for $\pi$ is 0.12272 < $\pi$ < 0.9936 and at a temperature of 72, the corresponding 90% confidence interval for $\pi$ is 0.0101 < $\pi$ < 0.0704.
 ```{r fig.dim=c(4, 3)}
-
 #suppress warnings
 oldw <- getOption("warn")
 options(warn = -1)
@@ -250,15 +223,13 @@ options(warn = -1)
 sigmoid = function(x) {
    1 / (1 + exp(-x))
 }
-
 #start with the parameter estimates from our model and our Temp data
 beta0 = model2$coefficients[1]
 beta1 = model2$coefficients[2]
 x <- df$Temp
 weights <- df$Number
-
-set.seed(23)
 #simulate new O.ring failure counts to estimate new model parameters
+set.seed(23)
 sim <- function(){
   #Sample temp data with replacement (bootstrap)
   x.sample <- sample(x, 23, replace = TRUE)
@@ -284,7 +255,6 @@ sim <- function(){
 
 #run simulation 10000 times
 n=10000
-
 sim_vals <- replicate(n,sim())
 #plot distribution of computed pi values and return the 90% conf interval for 
 #Temp = 31 degrees
@@ -307,14 +277,14 @@ We include the quadratic term on temperature and run a LRT using the chi-squared
 ```{r}
 model3 <- glm(O.ring/Number ~ Temp + I(Temp^2), data = df, family = binomial, 
               weights = Number)
-summary(model3)
+summary(model3)$coefficients
 ha <- model3
 anova(h0, ha, test = "Chisq")
 ```
 
 ## In addition to the questions in Question 4 and 5, answer the following questions:
 ### a. Interpret the main result of your final model in terms of both odds and probability of failure 
-After eliminating other potential covariates like order of launch, pressure, cross terms, square terms and log terms, we tested one more thing.  Using a visual cue from the original Temp vs. failure chart in the EDA, we replaced the continuous variable Temp with a binary variable Temp<65.  Our coefficient for the binary variable had an estimate of 1.9792, and while it had a relatively large standard error, was still highly significant. Exp(1.9792) = 7.327, which means that if the temperature is below the 65 degree threshold a failure is 7.327 times as likely (or 6.327 times more likely) to occur as it would if the temperature is above the 65 degree threshold.  This is a nice tidy answer, is reflective of our observations in EDA and has a great p-value but it reeks of p-hacking, and it would not be robust to further declining temperatures.
+After eliminating other potential covariates like order of launch, pressure, cross terms, square terms and log terms, we tested one more thing.  Using a visual cue from the original Temp vs. failure chart in the EDA, we replaced the continuous variable Temp with a binary variable Temp<65.  Our coefficient for the binary variable had an estimate of 1.9792, and while it had a relatively large standard error, was still highly significant. Exp(1.9792) = 7.237, which means that if the temperature is below the 65 degree threshold a failure is 7.237 times as likely (or 6.237 times more likely) to occur as it would if the temperature is above the 65 degree threshold.  This is a nice tidy answer, is reflective of our observations in EDA and has a great p-value but it reeks of p-hacking, and it would not be robust to further declining temperatures.
 
 As a result it is ultimately best to go back to the basic O.ring ~ Temp single factor logistic regression model.  That model is not as dramatic in terms of statistical significance but is still around a 95% confidence level and feels less forced. It implies that with every one degree increase in temperature the likelihood of an o-ring failure decreases 11% from what it was, and vice versa. 
 ```{r}
@@ -324,9 +294,7 @@ model4 <- glm(O.ring/Number ~ bin.Temp, data = df, family = binomial,
               weights = Number)
 summary(model4)
 
-exp(1.9792)
-exp(-0.1156)
-
+exp(model4$coefficients[2])
 ```
 
 ### b. With the same set of explanatory variables in your final model, estimate a linear regression model. Explain the model results; conduct model diagnostic; and assess the validity of the model assumptions.  Would you use the linear regression model or binary logistic regression in this case.  Why? Or, why not?
@@ -343,4 +311,4 @@ plot(lin.model)
 
 There are 6 model assumptions for the linear model. 1) We assume the true model is linear, which here is clearly invalid since it implies that for small enough or large enough temperatures the probability of O-ring failure will be outside of [0,1], which violates the laws of probability. 2) We assume samples are IID, but as discussed in 4a), the samples are not independent, in particular we have 6 samples per flight which all undergo roughly the same conditions outside of Temp/Pressure. 3) We assume there is no perfect collinearity between explanatory variables, which is not violated here as we only have a single explanatory variable. 4) We assume zero-conditional mean of residuals and exogeneity. The former appears violated in the residuals vs fitted plot above, as we expect negative residuals for intermediate temperatures, although it is difficult to tell with so few datapoints. Exogeneity holds as long as we assume a strictly associative relationship, however we are assuming that certain temperatures might directly cause failure, thus the model is implicitly causal. As a result, we must be aware of the possibility of omitted variable bias in our model, which may require some subject matter expertise to identify and test new explanatory variables outside of the scope of our current dataset. 5) We assume homoskedasticity of errors, which appears violated in the standardized residuals vs fitted plot, although again this is difficult to determine with such a small sample. 6) We assume errors are normally distributed, which appears to hold somewhat for our model looking at the normall q-q plot above, however we note that the sample is a bit too small to leverage the CLT, so the slight anormality is potentially a violation.
 
-Given that certain linear model assumptions are explicitly violated in the example, most notably the assumption that the predicted failure for an O-ring should be bounded between [0,1] will not hold for temperatures below -48.4 degrees or above 77.8 degrees.
+Given that certain linear model assumptions are explicitly violated in the example, most notably the assumption that the predicted failure for an O-ring should be bounded between [0,1] will not hold for temperatures below -48.4 degrees or above 77.8 degrees. Because of this, we would choose the binary logistic model over the linear model.
