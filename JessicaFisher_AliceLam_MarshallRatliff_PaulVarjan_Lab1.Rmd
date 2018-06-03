@@ -330,7 +330,7 @@ exp(-0.1156)
 ```
 
 ### b. With the same set of explanatory variables in your final model, estimate a linear regression model. Explain the model results; conduct model diagnostic; and assess the validity of the model assumptions.  Would you use the linear regression model or binary logistic regression in this case.  Why? Or, why not?
-```{r fig.dim=c(4, 3)}
+```{r fig.dim=c(3.5, 3)}
 lin.model <- lm(O.ring/Number ~ Temp, data = df, weights = Number)
 summary(lin.model)
 plot(lin.model)
