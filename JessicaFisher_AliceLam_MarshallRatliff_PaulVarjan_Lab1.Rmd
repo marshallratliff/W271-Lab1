@@ -245,17 +245,22 @@ sigmoid = function(x) {
 beta0 = model2$coefficients[1]
 beta1 = model2$coefficients[2]
 x <- df$Temp
-pi <- sigmoid(beta0 + beta1*x)
 weights <- df$Number
 
 #simulate new O.ring failure counts to estimate new model parameters
 sim <- function(){
+  #Sample temp data with replacement (bootstrap)
+  x.sample <- sample(x, 23, replace = TRUE)
+  #If above step is unnecessary can just use original data, which yields very similar results
+  #x.sample <- x
+  #Calculate i
+  pi <- sigmoid(beta0 + beta1*x.sample)
   #simulate new O.ring failure counts as binomial random variable with n=6 
   #trials and p=pi probability of success
-  y <- rbinom(n = length(x), size = 6, prob = pi)
+  y <- rbinom(n = length(x.sample), size = 6, prob = pi)
 
   #fit a new regression model on the simulated O.ring failure counts
-  mod.fit <- glm(y/weights ~ x, family = binomial, weights = weights)
+  mod.fit <- glm(y/weights ~ x.sample, family = binomial, weights = weights)
   beta0.star = mod.fit$coefficients[1]
   beta1.star = mod.fit$coefficients[2]
 
@@ -313,10 +318,20 @@ exp(-0.1156)
 
 ```
 
-### After eliminating other potential covariates like order of launch, pressure, cross terms, square terms and log terms, we tested one more thing.  Using a visual cue from the original Temp vs. failure chart in the EDA, we replaced the continuous variable Temp with a binary variable Temp<65.  Our coefficient for the binary variable had an estimate of 1.9792, and while it had a relatively large standard error, was still highly significant. Exp(1.9792) = 7.327, which means that if the temperature is below the 65 degree threshold a failure is 6.327 times as likely to occur as it would if the temperature is above the 65 degree threshold.  This is a nice tidy answer, is reflective of our observations in EDA and has a great p-value but it reeks of p-hacking, and it would not be robust to further declining temperatures.
+### After eliminating other potential covariates like order of launch, pressure, cross terms, square terms and log terms, we tested one more thing.  Using a visual cue from the original Temp vs. failure chart in the EDA, we replaced the continuous variable Temp with a binary variable Temp<65.  Our coefficient for the binary variable had an estimate of 1.9792, and while it had a relatively large standard error, was still highly significant. Exp(1.9792) = 7.327, which means that if the temperature is below the 65 degree threshold a failure is 7.327 times as likely (or 6.327 times more likely) to occur as it would if the temperature is above the 65 degree threshold.  This is a nice tidy answer, is reflective of our observations in EDA and has a great p-value but it reeks of p-hacking, and it would not be robust to further declining temperatures.
 ### As a result it is ultimately best to go back to the basic O.ring ~ Temp single factor, loglinear(is this accurate?) regression model.  That model is not as dramatic in terms of statistical significance but is still around a 95% confidence level and is far less forced. It implies that with every one degree increase in temperature the likelihood of an o-ring failure decreases 11% from what it was, and vice versa.  
 
 ##   b. With the same set of explanatory variables in your final model, estimate a linear regression model. Explain the model results; conduct model diagnostic; and assess the validity of the model assumptions.  Would you use the linear regression model or binary logistic regression in this case.  Why? Or, why not?
+
+```{r}
+lin.model <- lm(O.ring/Number ~ Temp, data = df, weights = Number)
+summary(lin.model)
+plot(lin.model)
+
+lin.model2 <- lm(O.ring/Number ~ bin.Temp, data = df, weights = Number)
+summary(lin.model2)
+plot(lin.model2)
+```
 
 [NEED ANSWER]
 
@@ -324,18 +339,14 @@ exp(-0.1156)
 THESE ARE MODELS FROM OTHER .RMD FILES JUST TO PREVENT LOSS OF USEFUL THINGS - SOME OF THESE DONT RUN
 
 ```{r}
-df$bin.Temp = df$Temp<67
-model4 <- glm(O.ring/Number ~ bin.Temp, data = df, family = binomial, 
-              weights = Number)
-summary(model4)
 
 df$bin.Temp = df$Temp<65
 model4 <- glm(O.ring/Number ~ bin.Temp, data = df, family = binomial, 
               weights = Number)
 summary(model4)
 
-exp(1.9792)
-exp(-0.1156)
+#According the to model, O-ring failure is about 7.24 times as likely given temperature below 65 degrees as above.
+exp(model4$coefficients[2])
 ```
 
 ```{r}
@@ -359,26 +370,5 @@ plot(newdf$bin.Temp, pi.hat * 6, ylim = range(c(0,6)),
      lwd = 2)
 ```
 
-```{r}
-model4 <- glm(O.ring/Number ~ Temp + log.Pressure, data = df, family = binomial, weights = Number)
-summary(model4)
-ha <- model4
-anova(h0, ha, test = "Chisq")
-```
-
-```{r}
-model4 <- glm(O.ring/Number ~ Temp + translate.Pressure, data = df, family = binomial, weights = Number)
-summary(model4)
-ha <- model4
-anova(h0, ha, test = "Chisq")
-```
 
 
-# [DO WE NEED THIS?] Testing other Models before moving on
-## Temp and Pressure with an Interaction term - an interaction term does not help improve the model.
-
-```{r}
-model4a <- glm(O.ring/Number ~ Temp + Pressure + Temp:Pressure, data = df, 
-              family = binomial, weights = Number)
-summary(model4a)
-```
