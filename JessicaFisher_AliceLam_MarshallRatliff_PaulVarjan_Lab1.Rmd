@@ -198,6 +198,7 @@ The Key assumption being made is that there is a linear relationship between the
 model2.pred31 <- model2$coefficients[1] + model2$coefficients[2]*31
 
 # Wald CI
+predict.data<-data.frame(Temp=31)
 pred31 <- predict(object = model2, newdata = predict.data, type = "link", se = TRUE)
 pi.hat31 <- exp(pred31$fit) / (1 + exp(pred31$fit))
 alpha <- 0.05
