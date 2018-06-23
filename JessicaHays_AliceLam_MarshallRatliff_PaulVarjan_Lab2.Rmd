@@ -1,0 +1,278 @@
+---
+title: 'w271 Lab 2: Cereal Shelf Placement '
+author: "Jessica Hays Fisher, Alice Lam, Marshall Ratliff, Paul Varjan"
+date: "6/3/2018"
+output:
+  pdf_document:
+    latex_engine: lualatex
+    toc: yes
+  html_document: default
+geometry: margin=1in
+fontsize: 11pt
+linespace: single
+---
+
+```{r}
+
+#Load libraries and insert a function to tidy up the code when they are printed out
+library(vcd)
+library(nnet)
+library(car)
+library(Hmisc)
+library(skimr)
+library(MASS)
+
+rm(list = ls())
+library(knitr)
+opts_chunk$set(tidy.opts=list(width.cutoff=60),tidy=TRUE)
+
+```
+
+```{r}
+cereal <- read.csv("cereal_dillons.csv")
+str(cereal)
+```
+
+```{r}
+# Examine the data to check data validity before proceeding with the questions.
+skim(cereal)
+```
+
+There are 7 variables with 40 observations evenly distributed across 4 shelves. There's no missing data. There are 38 types of cereal, with sugar content ranging 0 to 20 gram, fat content ranging from 0 to 5 gram, sodium content from 0 to 330 gram, serving size ranging 27 to 60 gram.
+
+##(a) The explanatory variables need to be re-formatted before proceeding further. First, divide each explanatory variable by its serving size to account for the different serving sizes among the cereals. Second, re-scale each variable to be within 0 and 1. 
+
+```{r}
+# the formula is from textbook
+standardize <- function(x) { (x - min(x)) / (max(x) - min(x))}
+cereal2 <- data.frame(Shelf = cereal$Shelf, Cereal = cereal$Cereal, 
+                      sugar = standardize(cereal$sugar_g / cereal$size_g), 
+                      fat = standardize(cereal$fat_g / cereal$size_g), 
+                      sodium = standardize(cereal$sodium / cereal$size_g))
+
+head(cereal2)
+```
+
+##(b) Construct side-by-side box plots with dot plots overlaid for each of the explanatory variables. Also, construct a parallel coordinates plot for the explanatory variables and the shelf number. Discuss if possible content differences exist among the shelves.
+
+```{r}
+# this code is from textbook
+boxplot(formula = sugar ~ Shelf, data = cereal2, ylab = "Sugar", 
+        xlab = "Shelf", main = "Sugar by Shelf", pars = list(outpch=NA))
+stripchart(x = cereal2$sugar ~ cereal2$Shelf, lwd = 2, col = "red", 
+           method = "jitter", vertical = TRUE, pch = 1, add = TRUE)
+
+boxplot(formula = fat ~ Shelf, data = cereal2, ylab = "Fat", 
+        xlab = "Shelf", main = "Fat by Shelf",pars = list(outpch=NA))
+stripchart(x = cereal2$fat ~ cereal2$Shelf, lwd = 2, col = "red", 
+           method = "jitter", vertical = TRUE, pch = 1, add = TRUE)
+
+boxplot(formula = sodium ~ Shelf, data = cereal2, ylab = "Sodium", 
+        xlab = "Shelf", main = "Sodium by Shelf", pars = list(outpch=NA))
+stripchart(x = cereal2$sodium ~ cereal2$Shelf, lwd = 2, col = "red", 
+           method = "jitter", vertical = TRUE, pch = 1, add = TRUE)
+
+```
+
+```{r}
+cereal3<-data.frame(cereal2[1], cereal2[,3:5])
+
+# Colors by condition:
+cereal.colors<-ifelse(test = cereal2$Shelf==1, yes = "cornsilk4", 
+                no = ifelse(test = cereal2$Shelf==2, yes = "coral2", 
+                no = ifelse(test = cereal2$Shelf==3, yes = "blueviolet", no= "aquamarine3")))
+# Line type by condition:
+cereal.lty<-ifelse(test = cereal2$Shelf==1, yes = "solid", 
+                no = ifelse(test = cereal2$Shelf==2, yes = "twodash", 
+                no = ifelse(test = cereal2$Shelf==3, yes = "solid", no = "twodash")))
+
+parcoord(x = cereal3, col = cereal.colors, lty = cereal.lty)  # Plot
+legend(x = 3.35, y = 1.05, legend = c("Shelf 1", "Shelf 2", "Shelf 3", "Shelf 4"), lty = c("solid", "twodash", "solid", "twodash"),
+  col=c("cornsilk4", "coral2", "blueviolet","aquamarine3"), cex=0.8, bty="n")
+```
+
+High sugar content seems to be most prevalent among Shelf 2. The other shelves have a pretty wide spread of sugar content, with means roughly in the same places. Of note is Shelf 1's bimodal distribution of sugar, with one cluster of cereals with nearly no sugar and the other cluster having above average sugar content. Without that low sugar cluster, the rest of the shelf would have a mean sugar content much closer to Shelf 2.
+
+Fat content seems to be pretty evenly distributed across shelves. In cereal this most likely corresponds to contents like nuts and oilseeds. There is a heavy occurrence of fat content at both extremes (1 and 0). Shelf 1 has so many 0 fat score cereals that its mean is lower than the others. Perhaps also notable is that shelf 2 is the only shelf with no cereals with a 0 score for fat, and that shelf 4 is the only shelf with no cereals with a 1 score, but visually, that information does not add muchin light of the rest of the fat content plots.
+
+Sodium content is notably highest on Shelf 1, but otherwise the other shelves have a more or less similar mean, with Shelf 3 showing the most breadth of sodium levels within that shelf. 
+
+##(c) The response has values of 1, 2, 3, and 4. Under what setting would it be desirable to take into account ordinality. Do you think this occurs here?
+
+Answer: If we believed that there was a natural ordering to the shelves, or that they could be arranged in an order such that shelf 1 < shelf 2 < shelf 3, etc. - then we would be desirable to take into account ordinality (especially if we believed that the "distance" between each level were equal). However, we do not believe that is the case with this data, as it is not clear whether being on a low shelf is objectively better than on a high shelf, or vice versa. There are attractors/detractors from each shelf height and for different customers - for example, children are at the height of lower shelves than adults are - but that ordering is not universal and therefore not desireable to take into account in our modeling.  If other data could be brought in that demonstrated the desirability or marketability of each shelf had some order (which probably does exist), that could also be used as a factor for ordinality.
+
+##(d) Estimate a multinomial regression model with linear forms of the sugar, fat, and sodium variables. Perform LRTs to examine the importance of each explanatory variable.
+
+```{r}
+levels(as.factor(cereal2$Shelf))
+mod1 <- multinom(as.factor(Shelf) ~ sugar + fat + sodium, data=cereal2)
+summary(mod1)
+Anova(mod1)
+```
+
+* We cannot use mcprofile package for likelihood ratio, as nnet package author does not believe that one at a time intervals should be calculated. We use value of c equal to 1 standard deviation instead. *
+```{r}
+sd.cereal<-apply(X=cereal2[, -c(2)], MARGIN = 2, FUN = sd)
+c.value<-c(sd.cereal)[2:4]
+round(c.value,2)
+```
+
+```{r}
+#coefficients(mod1)
+beta.hat2<-coefficients(mod1)[1,2:4]
+beta.hat3<-coefficients(mod1)[2,2:4]
+beta.hat4<-coefficients(mod1)[3,2:4]
+# OR for j = 2 (Shelf 2 vs Shelf 1)
+print("OR for j = 2")
+round(exp(c.value*beta.hat2),2)
+round(1/exp(c.value*beta.hat2),2)
+# OR for j = 3 (Shelf 3 vs Shelf 1)
+print("OR for j = 3")
+round(exp(c.value*beta.hat3),2)
+round(1/exp(c.value*beta.hat3),2)
+# OR for j = 4 (Shelf 4 vs Shelf 1)
+print("OR for j = 3")
+round(exp(c.value*beta.hat4),2)
+round(1/exp(c.value*beta.hat4),2)
+```
+
+##(e) Show that there are no significant interactions among the explanatory variables (including an interaction among all three variables).
+
+```{r}
+## Not actually sure if this is what the question means?
+
+modA <- multinom(as.factor(Shelf) ~ sugar + fat + sodium + sugar:fat, data = cereal2)
+Anova(modA)
+
+modB <- multinom(as.factor(Shelf) ~ sugar + fat + sodium + sugar:sodium, data = cereal2)
+Anova(modB)
+
+modC <- multinom(as.factor(Shelf) ~ sugar + fat + sodium + fat:sodium, data = cereal2)
+Anova(modC)
+
+modD <- multinom(as.factor(Shelf) ~ sugar + fat + sodium + fat:sodium:sugar, data = cereal2)
+Anova(modD)
+
+modE <- multinom(as.factor(Shelf) ~ sugar + fat + sodium + sugar:fat +
+                   sugar:sodium + fat:sodium + fat:sodium:sugar, data = cereal2)
+Anova(modE)
+```
+
+##(f) Kellogg's Apple Jacks (http://www.applejacks.com) is a cereal marketed toward children. For a serving size of 28 grams, its sugar content is 12 grams, fat content is 0.5 grams, and sodium content is 130 milligrams. Estimate the shelf probabilities for Apple Jacks.
+
+Alice's solution:
+
+```{r}
+#recall rescale function from textbook stand01 <- function(x) { (x - min(x))/(max(x) - min(x)) } 
+# cereal has the pre-scaled variable numbers. Don't use cereal2
+stand02 <-function(x, variable) { (x-min(variable))/(max(variable)-min(variable))}
+sugar1<-stand02(x = 12/28, variable = cereal$sugar)
+fat1<-stand02(x=0.5/28, variable=cereal$fat)
+sodium1<-stand02(x=1.3/28, variable=cereal$sodium)
+newdata<-data.frame(sugar=sugar1, fat=fat1,sodium=sodium1)
+lin.pred.hat <- predict(object = mod1, newdata = newdata, type = "probs", se = TRUE)
+round(lin.pred.hat,7)
+
+```
+
+Jessica's solution:
+
+```{r}
+stand.new <- function(meas, serv_size, comparison) {( meas/serv_size - min(comparison)) / (max(comparison) - min(comparison))}
+
+newdata <- data.frame(sugar = stand.new(12, 28, cereal$sugar_g/cereal$size_g), 
+                      fat = stand.new(0.5, 28, cereal$fat_g/cereal$size_g),
+                      sodium = stand.new(130, 28, cereal$sodium_mg/cereal$size_g))
+
+round(predict(object = mod1, newdata = newdata, type = "probs", se.fit = TRUE),7)
+```
+
+
+##(g) Construct a plot similar to Figure 3.3 where the estimated probability for a shelf is on the y-axis and the sugar content is on the x-axis. Use the mean overall fat and sodium content as the corresponding variable values in the model. Interpret the plot with respect to sugar content.
+
+Alice's solution:
+
+```{r}
+newfat <- c(rep(mean(cereal2$fat),11))
+newsodium <- c(rep(mean(cereal2$sodium),11))
+newsugar <- c(seq(0,1, 0.1))
+simulated.data <- data.frame(sugar=newsugar, fat=newfat, sodium=newsodium)
+pi.hat.sim <-predict(mod1, newdata=simulated.data, type="probs")
+plot.new()
+x<- seq(0,1,0.1)
+plot(x,pi.hat.sim[,1],type='l',col="blue",
+     ylim=range(min(pi.hat.sim), max(pi.hat.sim)),
+     xlab = "Sugar", ylab = "predicted probability")
+lines(x, pi.hat.sim[,2], col="gray")
+lines(x, pi.hat.sim[,3], col="red")
+lines(x, pi.hat.sim[,4], col="green")
+
+legend(x = 0.4, y = 0.85 , legend = c("Shelf 1", "Shelf 2", "Shelf 3", "Shelf 4"), col=c("blue","gray","red","green"),lty = "solid")
+
+```
+
+Jessica's solution:
+
+```{r}
+## Open question: in figure 3.3, they have each line stop at the min/max for each type of kernel (equivalent to each shelf in our example). Is this what we want, or do we want it to go from 0 to 1 for each shelf? (code for both below, 0-1 is commented out.)
+
+
+beta.hat<-coefficients(mod1)
+beta.hat
+mean_fat <- mean(cereal2$fat)
+mean_sodium <- mean(cereal2$sodium)
+
+
+# Create plotting area first to make sure get the whole region with respect to x-axis
+curve(expr = 1/(1 + exp(beta.hat[1,1] + beta.hat[1,2]*x) + exp(beta.hat[2,1] + beta.hat[2,2]*x)), ylab = expression(hat(pi)), xlab = "sugar",
+  xlim = c(min(cereal2$sugar), max(cereal2$sugar)), ylim = c(0, 1), col = "black", lty = "solid", lwd = 2, n = 1000, type = "n",
+  panel.first = grid(col = "gray", lty = "dotted"))
+
+## Plot each pi_j
+# Shelf1
+curve(expr = 1/(1 + exp(beta.hat[1,1] + beta.hat[1,2]*x + beta.hat[1,3]*mean_fat + beta.hat[1,4]*mean_sodium)
+                + exp(beta.hat[2,1] + beta.hat[2,2]*x + beta.hat[2,3]*mean_fat + beta.hat[2,4]*mean_sodium)
+                + exp(beta.hat[3,1] + beta.hat[3,2]*x + beta.hat[3,3]*mean_fat + beta.hat[3,4]*mean_sodium)),
+  col = "black", lty = "solid", lwd = 2, n = 1000, add = TRUE,
+  xlim = c(min(cereal2$sugar[cereal2$Shelf == 1]), max(cereal2$sugar[cereal2$Shelf == 1])))
+  # xlim = c(0,1))  
+
+# Shelf2
+curve(expr = exp(beta.hat[1,1] + beta.hat[1,2]*x + beta.hat[1,3]*mean_fat + beta.hat[1,4]*mean_sodium)/
+        (1 + exp(beta.hat[1,1] + beta.hat[1,2]*x + beta.hat[1,3]*mean_fat + beta.hat[1,4]*mean_sodium)
+                + exp(beta.hat[2,1] + beta.hat[2,2]*x + beta.hat[2,3]*mean_fat + beta.hat[2,4]*mean_sodium)
+                + exp(beta.hat[3,1] + beta.hat[3,2]*x + beta.hat[3,3]*mean_fat + beta.hat[3,4]*mean_sodium)), 
+      col = "green", lty = "longdash", lwd = 2, n = 1000, add = TRUE, 
+      xlim = c(min(cereal2$sugar[cereal2$Shelf == 2]), max(cereal2$sugar[cereal2$Shelf == 2])))
+      # xlim = c(0,1))  
+
+# Shelf3
+curve(expr = exp(beta.hat[2,1] + beta.hat[2,2]*x + beta.hat[2,3]*mean_fat + beta.hat[2,4]*mean_sodium)/
+        (1 + exp(beta.hat[1,1] + beta.hat[1,2]*x + beta.hat[1,3]*mean_fat + beta.hat[1,4]*mean_sodium)
+                + exp(beta.hat[2,1] + beta.hat[2,2]*x + beta.hat[2,3]*mean_fat + beta.hat[2,4]*mean_sodium)
+                + exp(beta.hat[3,1] + beta.hat[3,2]*x + beta.hat[3,3]*mean_fat + beta.hat[3,4]*mean_sodium)),
+  col = "red", lty = "dotdash", lwd = 2, n = 1000, add = TRUE,
+  xlim = c(min(cereal2$sugar[cereal2$Shelf == 3]), max(cereal2$sugar[cereal2$Shelf == 3])))
+  # xlim = c(0,1))
+
+# Shelf4
+curve(expr = exp(beta.hat[3,1] + beta.hat[3,2]*x + beta.hat[3,3]*mean_fat + beta.hat[3,4]*mean_sodium)/
+        (1 + exp(beta.hat[1,1] + beta.hat[1,2]*x + beta.hat[1,3]*mean_fat + beta.hat[1,4]*mean_sodium)
+                + exp(beta.hat[2,1] + beta.hat[2,2]*x + beta.hat[2,3]*mean_fat + beta.hat[2,4]*mean_sodium)
+                + exp(beta.hat[3,1] + beta.hat[3,2]*x + beta.hat[3,3]*mean_fat + beta.hat[3,4]*mean_sodium)),
+  col = "blue", lty = "dotted", lwd = 2, n = 1000, add = TRUE,
+  xlim = c(min(cereal2$sugar[cereal2$Shelf == 4]), max(cereal2$sugar[cereal2$Shelf == 4])))   
+  # xlim = c(0,1))
+
+
+
+
+legend(x = 0.5, y = 1.0, legend=c("Shelf 1", "Shelf 2", "Shelf 3", "Shelf 4"), 
+       lty=c("solid","longdash", "dotdash", "dotted"),
+  col=c("black","green","red", "blue"), bty="n", lwd = c(2,2,2), seg.len = 4)
+
+
+```
+
+##(h) Estimate odds ratios and calculate corresponding confidence intervals for each explanatory variable. Relate your interpretations back to the plots constructed for this exercise.
+
