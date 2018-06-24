@@ -40,6 +40,16 @@ skim(cereal)
 
 There are 7 variables with 40 observations evenly distributed across 4 shelves. There's no missing data. There are 38 types of cereal, with sugar content ranging 0 to 20 gram, fat content ranging from 0 to 5 gram, sodium content from 0 to 330 gram, serving size ranging 27 to 60 gram.
 
+*Additional Notes: add scatterplotmatrix for explanatory vars.
+```{r, message=F}
+#suppress warnings
+oldw <- getOption("warn")
+options(warn = -1)
+scatterplotMatrix(~ size_g + sugar_g + fat_g + sodium_mg, data = cereal)
+#restore old warning level
+options(warn = oldw)
+```
+
 ##(a) The explanatory variables need to be re-formatted before proceeding further. First, divide each explanatory variable by its serving size to account for the different serving sizes among the cereals. Second, re-scale each variable to be within 0 and 1. 
 
 ```{r}
@@ -75,7 +85,7 @@ stripchart(x = cereal2$sodium ~ cereal2$Shelf, lwd = 2, col = "red",
 ```
 
 ```{r}
-cereal3<-data.frame(cereal2[1], cereal2[,3:5])
+cereal3<-data.frame(cereal2[1], cereal2[3], cereal2[5], cereal2[4])
 
 # Colors by condition:
 cereal.colors<-ifelse(test = cereal2$Shelf==1, yes = "cornsilk4", 
@@ -97,7 +107,7 @@ Fat content seems to be pretty evenly distributed across shelves. In cereal this
 
 Sodium content is notably highest on Shelf 1, but otherwise the other shelves have a more or less similar mean, with Shelf 3 showing the most breadth of sodium levels within that shelf. 
 
-*Additional Notes: The cereals with lowest sugar content on shelf 2 had elevated fat and sodium content comparatively, indicating there is still an inflated flavor profile corresponding to likely less healthy but popular cereals.
+*Additional Notes: The cereals with lowest sugar content on shelf 2 had elevated fat and sodium content comparatively, indicating there is still an inflated flavor profile corresponding to likely less healthy but popular cereals. **Check that reordering matches our analysis*
 
 ##(c) The response has values of 1, 2, 3, and 4. Under what setting would it be desirable to take into account ordinality. Do you think this occurs here?
 
@@ -115,47 +125,13 @@ Anova(mod1)
 ```
 
 * We cannot use mcprofile package for likelihood ratio, as nnet package author does not believe that one at a time intervals should be calculated. We use value of c equal to 1 standard deviation instead. *
-```{r}
-sd.cereal<-apply(X=cereal2[, -c(2)], MARGIN = 2, FUN = sd)
-c.value<-c(sd.cereal)[2:4]
-round(c.value,2)
-```
 
-```{r}
-#coefficients(mod1)
-beta.hat2<-coefficients(mod1)[1,2:4]
-beta.hat3<-coefficients(mod1)[2,2:4]
-beta.hat4<-coefficients(mod1)[3,2:4]
-# OR for j = 2 (Shelf 2 vs Shelf 1)
-print("OR for j = 2 vs j = 1")
-round(exp(c.value*beta.hat2),2)
-round(1/exp(c.value*beta.hat2),2)
-# OR for j = 3 (Shelf 3 vs Shelf 1)
-print("OR for j = 3 vs j = 1")
-round(exp(c.value*beta.hat3),2)
-round(1/exp(c.value*beta.hat3),2)
-# OR for j = 4 (Shelf 4 vs Shelf 1)
-print("OR for j = 3 vs j = 1")
-round(exp(c.value*beta.hat4),2)
-round(1/exp(c.value*beta.hat4),2)
-# OR for j = 3 (Shelf 3 vs Shelf 2)
-print("OR for j = 3 vs j = 2")
-round(exp(c.value*beta.hat3-c.value*beta.hat2),2)
-round(1/exp(c.value*beta.hat3-c.value*beta.hat2),2)
-# OR for j = 4 (Shelf 3 vs Shelf 2)
-print("OR for j = 4 vs j = 2")
-round(exp(c.value*beta.hat4-c.value*beta.hat2),2)
-round(1/exp(c.value*beta.hat4-c.value*beta.hat2),2)
-# OR for j = 4 (Shelf 3 vs Shelf 3)
-print("OR for j = 4 vs j = 3")
-round(exp(c.value*beta.hat4-c.value*beta.hat3),2)
-round(1/exp(c.value*beta.hat4-c.value*beta.hat3),2)
-```
+*Additional note: Sugar and Sodium are key discriminating factors both in terms of Log Likelihood and Significance.
 
 ##(e) Show that there are no significant interactions among the explanatory variables (including an interaction among all three variables).
 
 ```{r}
-## Not actually sure if this is what the question means?
+## Create expanded models including interaction terms between all pairs of explanatory variables and triple interaction between all 3.
 
 modA <- multinom(as.factor(Shelf) ~ sugar + fat + sodium + sugar:fat, data = cereal2)
 Anova(modA)
@@ -174,24 +150,9 @@ modE <- multinom(as.factor(Shelf) ~ sugar + fat + sodium + sugar:fat +
 Anova(modE)
 ```
 
+Looking at the significance values of the likelihood ratio tests for each additional interaction term none of them are even marginally significant, and the individual term significances remain fairly stable in significance levels.
+
 ##(f) Kellogg's Apple Jacks (http://www.applejacks.com) is a cereal marketed toward children. For a serving size of 28 grams, its sugar content is 12 grams, fat content is 0.5 grams, and sodium content is 130 milligrams. Estimate the shelf probabilities for Apple Jacks.
-
-Alice's solution:
-
-```{r}
-#recall rescale function from textbook stand01 <- function(x) { (x - min(x))/(max(x) - min(x)) } 
-# cereal has the pre-scaled variable numbers. Don't use cereal2
-stand02 <-function(x, variable) { (x-min(variable))/(max(variable)-min(variable))}
-sugar1<-stand02(x = 12/28, variable = cereal$sugar)
-fat1<-stand02(x=0.5/28, variable=cereal$fat)
-sodium1<-stand02(x=1.3/28, variable=cereal$sodium)
-newdata<-data.frame(sugar=sugar1, fat=fat1,sodium=sodium1)
-lin.pred.hat <- predict(object = mod1, newdata = newdata, type = "probs", se = TRUE)
-round(lin.pred.hat,7)
-
-```
-
-Jessica's solution:
 
 ```{r}
 stand.new <- function(meas, serv_size, comparison) {( meas/serv_size - min(comparison)) / (max(comparison) - min(comparison))}
@@ -203,6 +164,7 @@ newdata <- data.frame(sugar = stand.new(12, 28, cereal$sugar_g/cereal$size_g),
 round(predict(object = mod1, newdata = newdata, type = "probs", se.fit = TRUE),7)
 ```
 
+From the above prediction, we see that Kellogg's Apple Jacks are most likely to be placed on shelf 2, given a relatively elevated level of sugar and a sodium level that falls in the first quantile making shelf 1 fairly unlikely. While it fits squarely in the range of sugary cereals, it does not have an extreme sugar level, so shelves 3 & 4 are still somewhat possible.
 
 ##(g) Construct a plot similar to Figure 3.3 where the estimated probability for a shelf is on the y-axis and the sugar content is on the x-axis. Use the mean overall fat and sodium content as the corresponding variable values in the model. Interpret the plot with respect to sugar content.
 
@@ -294,5 +256,44 @@ This chart shows the predicted probabilities of which shelf a box of cereal woul
 
 *Additional notes: In particular, the plot shows that for relatively low sugar levels, assuming average levels of fat and sodium, that shelf 3 or shelf 4 are vastly more likely, while for higher sugar content, shelf 2 becomes dominant in likelihood while shelf 1 becomes more likely than the remaining two shelves. This corresponds with the hypothesis that sugary cereals target children, who are closest to Shelves 1 & 2, but for whom shelves 3 & 4 are too difficult to either see or reach. It is also notable that the increase in likelihood for shelf 1 is clear but substantially subdued which can almost certainly be attributed to the assumption of average sodium levels, given that this is the key explanatory variable for shelf 1. 
 
+***Key to-do: Merge solid and dotted line graphs for min-max ranges vs out of sample values respectively.
+
 ##(h) Estimate odds ratios and calculate corresponding confidence intervals for each explanatory variable. Relate your interpretations back to the plots constructed for this exercise.
 
+```{r}
+sd.cereal<-apply(X=cereal2[, -c(2)], MARGIN = 2, FUN = sd)
+c.value<-c(sd.cereal)[2:4]
+# Estimated standard deviations for each explanatory variable
+round(c.value,2)
+
+#coefficients(mod1)
+beta.hat2<-coefficients(mod1)[1,2:4]
+beta.hat3<-coefficients(mod1)[2,2:4]
+beta.hat4<-coefficients(mod1)[3,2:4]
+# OR for j = 2 (Shelf 2 vs Shelf 1)
+print("OR for j = 2 vs j = 1")
+round(exp(c.value*beta.hat2),2)
+round(1/exp(c.value*beta.hat2),2)
+# OR for j = 3 (Shelf 3 vs Shelf 1)
+print("OR for j = 3 vs j = 1")
+round(exp(c.value*beta.hat3),2)
+round(1/exp(c.value*beta.hat3),2)
+# OR for j = 4 (Shelf 4 vs Shelf 1)
+print("OR for j = 3 vs j = 1")
+round(exp(c.value*beta.hat4),2)
+round(1/exp(c.value*beta.hat4),2)
+# OR for j = 3 (Shelf 3 vs Shelf 2)
+print("OR for j = 3 vs j = 2")
+round(exp(c.value*beta.hat3-c.value*beta.hat2),2)
+round(1/exp(c.value*beta.hat3-c.value*beta.hat2),2)
+# OR for j = 4 (Shelf 3 vs Shelf 2)
+print("OR for j = 4 vs j = 2")
+round(exp(c.value*beta.hat4-c.value*beta.hat2),2)
+round(1/exp(c.value*beta.hat4-c.value*beta.hat2),2)
+# OR for j = 4 (Shelf 3 vs Shelf 3)
+print("OR for j = 4 vs j = 3")
+round(exp(c.value*beta.hat4-c.value*beta.hat3),2)
+round(1/exp(c.value*beta.hat4-c.value*beta.hat3),2)
+```
+
+*Key to-do: Add Confidence interval tables for each explanatory variable for each pair of shelves. Compare to plots above and in EDA. Refer to pages 160-163 in the book for guidance
