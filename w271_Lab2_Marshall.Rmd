@@ -266,34 +266,61 @@ c.value<-c(sd.cereal)[2:4]
 # Estimated standard deviations for each explanatory variable
 round(c.value,2)
 
+conf.beta <- confint(object = mod1, level = 0.95)
+ci.OR <- exp(c.value*conf.beta[2:4,1:2,])
+
 #coefficients(mod1)
 beta.hat2<-coefficients(mod1)[1,2:4]
 beta.hat3<-coefficients(mod1)[2,2:4]
 beta.hat4<-coefficients(mod1)[3,2:4]
+
 # OR for j = 2 (Shelf 2 vs Shelf 1)
 print("OR for j = 2 vs j = 1")
-round(exp(c.value*beta.hat2),2)
-round(1/exp(c.value*beta.hat2),2)
+mid2 = exp(c.value*beta.hat2)
+round(mid2,2)
+round(1/mid2,2)
+round(data.frame(low = ci.OR[,1,1], mid = mid2, up = ci.OR[,2,1]),2)
+
 # OR for j = 3 (Shelf 3 vs Shelf 1)
 print("OR for j = 3 vs j = 1")
-round(exp(c.value*beta.hat3),2)
-round(1/exp(c.value*beta.hat3),2)
+mid3 = exp(c.value*beta.hat3)
+round(mid3,2)
+round(1/mid3,2)
+round(data.frame(low = ci.OR[,1,2], mid = mid3, up = ci.OR[,2,2]),2)
+
 # OR for j = 4 (Shelf 4 vs Shelf 1)
 print("OR for j = 3 vs j = 1")
-round(exp(c.value*beta.hat4),2)
-round(1/exp(c.value*beta.hat4),2)
+mid4 = exp(c.value*beta.hat4)
+round(mid4,2)
+round(1/mid4,2)
+round(data.frame(low = ci.OR[,1,3], mid = mid4, up = ci.OR[,2,3]),2)
+
 # OR for j = 3 (Shelf 3 vs Shelf 2)
 print("OR for j = 3 vs j = 2")
-round(exp(c.value*beta.hat3-c.value*beta.hat2),2)
-round(1/exp(c.value*beta.hat3-c.value*beta.hat2),2)
+mid = exp(c.value*beta.hat3-c.value*beta.hat2)
+round(mid,2)
+round(1/mid,2)
+low = apply(matrix(c(ci.OR[,1,2]/mid2,mid3/ci.OR[,2,1]),3),1,min)
+up = apply(matrix(c(ci.OR[,2,2]/mid2,mid3/ci.OR[,1,1]),3),1,max)
+round(data.frame(low = low, mid = mid, up = up),2)
+
 # OR for j = 4 (Shelf 3 vs Shelf 2)
 print("OR for j = 4 vs j = 2")
-round(exp(c.value*beta.hat4-c.value*beta.hat2),2)
-round(1/exp(c.value*beta.hat4-c.value*beta.hat2),2)
+mid = exp(c.value*beta.hat4-c.value*beta.hat2)
+round(mid,2)
+round(1/mid,2)
+low = apply(matrix(c(ci.OR[,1,3]/mid2,mid4/ci.OR[,2,1]),3),1,min)
+up = apply(matrix(c(ci.OR[,2,3]/mid2,mid4/ci.OR[,1,1]),3),1,max)
+round(data.frame(low = low, mid = mid, up = up),2)
+
 # OR for j = 4 (Shelf 3 vs Shelf 3)
 print("OR for j = 4 vs j = 3")
-round(exp(c.value*beta.hat4-c.value*beta.hat3),2)
-round(1/exp(c.value*beta.hat4-c.value*beta.hat3),2)
+mid = exp(c.value*beta.hat4-c.value*beta.hat3)
+round(mid,2)
+round(1/mid,2)
+low = apply(matrix(c(ci.OR[,1,3]/mid3,mid4/ci.OR[,2,2]),3),1,min)
+up = apply(matrix(c(ci.OR[,2,3]/mid3,mid4/ci.OR[,1,2]),3),1,max)
+round(data.frame(low = low, mid = mid, up = up),2)
 ```
 
 *Key to-do: Add Confidence interval tables for each explanatory variable for each pair of shelves. Compare to plots above and in EDA. Refer to pages 160-163 in the book for guidance
