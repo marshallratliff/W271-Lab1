@@ -49,23 +49,23 @@ scatterplotMatrix(~ size_g + sugar_g + fat_g + sodium_mg, data = cereal)
 options(warn = oldw)
 ```
 
+There is not much clear relationship between any of the variables in the scatterplot matrix, with fairly horizontal lines between more pairs indicating a general lack of correlation. The matrix together with a lack of strong supporting intuition suggest that there is no clear value of interaction terms between the explanatory variables.
+
+Part (b) involves additional EDA, so we save the rest of our EDA for this section.
+
 ##(a) The explanatory variables need to be re-formatted before proceeding further. First, divide each explanatory variable by its serving size to account for the different serving sizes among the cereals. Second, re-scale each variable to be within 0 and 1. 
 
 ```{r}
-# the formula is from textbook
 standardize <- function(x) { (x - min(x)) / (max(x) - min(x))}
 cereal2 <- data.frame(Shelf = cereal$Shelf, Cereal = cereal$Cereal, 
                       sugar = standardize(cereal$sugar_g / cereal$size_g), 
                       fat = standardize(cereal$fat_g / cereal$size_g), 
                       sodium = standardize(cereal$sodium / cereal$size_g))
-
-head(cereal2)
 ```
 
 ##(b) Construct side-by-side box plots with dot plots overlaid for each of the explanatory variables. Also, construct a parallel coordinates plot for the explanatory variables and the shelf number. Discuss if possible content differences exist among the shelves.
 
 ```{r}
-# this code is from textbook
 boxplot(formula = sugar ~ Shelf, data = cereal2, ylab = "Sugar", 
         xlab = "Shelf", main = "Sugar by Shelf", pars = list(outpch=NA))
 stripchart(x = cereal2$sugar ~ cereal2$Shelf, lwd = 2, col = "red", 
@@ -163,7 +163,7 @@ newdata <- data.frame(sugar = stand.new(12, 28, cereal$sugar_g/cereal$size_g),
 round(predict(object = mod1, newdata = newdata, type = "probs", se.fit = TRUE),7)
 ```
 
-From the above prediction, we see that Kellogg's Apple Jacks are most likely to be placed on shelf 2, given a relatively elevated level of sugar and a sodium level that falls in the first quantile making shelf 1 fairly unlikely. While it fits squarely in the range of sugary cereals, it does not have an extreme sugar level, so shelves 3 & 4 are still somewhat possible.
+From the above prediction, we see that Kellogg's Apple Jacks are most likely to be placed on shelf 2, given a relatively elevated level of sugar and a sodium level that falls in the first quantile making shelf 1 fairly unlikely. While it fits squarely in the range of sugary cereals, it does not have an extreme sugar level, so shelves 3 & 4 are still somewhat possible. As mentioned previously in part (c), sugary cereals are likely to be placed on shelf 2 for close proximity to children's eye-level, which would presumably aid in sales for Kellogg's Apple Jacks.
 
 ##(g) Construct a plot similar to Figure 3.3 where the estimated probability for a shelf is on the y-axis and the sugar content is on the x-axis. Use the mean overall fat and sodium content as the corresponding variable values in the model. Interpret the plot with respect to sugar content.
 
@@ -274,7 +274,7 @@ mid = exp(c.value*beta.hat2)
 round(mid,4)
 round(1/mid,4)
 round(data.frame(low = ci.OR[,1,1], mid = mid, up = ci.OR[,2,1]),4)
-# Significant variables
+# Significant variables for j = 2 vs j = 1
 round(data.frame(low = 1/ci.OR[3,2,1], mid = 1/mid[3], up = 1/ci.OR[3,1,1]),4)
 
 # OR for j = 3 (Shelf 3 vs Shelf 1)
@@ -283,7 +283,7 @@ mid = exp(c.value*beta.hat3)
 round(mid,4)
 round(1/mid,4)
 round(data.frame(low = ci.OR[,1,2], mid = mid, up = ci.OR[,2,2]),4)
-# Significant variables
+# Significant variables for j = 3 vs j = 1
 round(data.frame(low = 1/ci.OR[c(1,3),2,2], mid = 1/mid[c(1,3)], up = 1/ci.OR[c(1,3),1,2]),4)
 
 # OR for j = 4 (Shelf 4 vs Shelf 1)
@@ -292,7 +292,7 @@ mid = exp(c.value*beta.hat4)
 round(mid,4)
 round(1/mid,4)
 round(data.frame(low = ci.OR[,1,3], mid = mid, up = ci.OR[,2,3]),4)
-# Significant variables
+# Significant variables for j = 4 vs j = 1
 round(data.frame(low = 1/ci.OR[c(1,3),2,3], mid = 1/mid[c(1,3)], up = 1/ci.OR[c(1,3),1,3]),4)
 
 cereal2$new_shelf <- relevel(as.factor(cereal2$Shelf),"2")
@@ -308,7 +308,7 @@ mid = exp(c.value*beta.hat3.new)
 round(mid,4)
 round(1/mid,4)
 round(data.frame(low = ci.OR.new[,1,2], mid = mid, up = ci.OR.new[,2,2]),4)
-# Significant variables
+# Significant variables for j = 3 vs j = 2
 round(data.frame(low = 1/ci.OR.new[1,2,2], mid = 1/mid[1], up = 1/ci.OR.new[1,1,2]),4)
 
 # OR for j = 4 (Shelf 4 vs Shelf 2)
@@ -317,7 +317,7 @@ mid = exp(c.value*beta.hat4.new)
 round(mid,4)
 round(1/mid,4)
 round(data.frame(low = ci.OR.new[,1,3], mid = mid, up = ci.OR.new[,2,3]),2)
-# Significant variables
+# Significant variables for j = 4 vs j = 2
 round(data.frame(low = 1/ci.OR.new[1,2,3], mid = 1/mid[1], up = 1/ci.OR.new[1,1,3]),4)
 
 cereal2$new_shelf <- relevel(as.factor(cereal2$Shelf),"3")
