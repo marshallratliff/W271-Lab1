@@ -38,7 +38,7 @@ str(cereal)
 skim(cereal)
 ```
 
-There are 7 variables with 40 observations evenly distributed across 4 shelves. There's no missing data. There are 38 types of cereal, with sugar content ranging 0 to 20 gram, fat content ranging from 0 to 5 gram, sodium content from 0 to 330 gram, serving size ranging 27 to 60 gram.
+There are 7 variables with 40 observations evenly distributed across 4 shelves. There's no missing data. There are 38 types of cereal, with sugar content ranging 0 to 20 gram, fat content ranging from 0 to 5 gram, sodium content from 0 to 330 milligram, serving size ranging 27 to 60 gram.
 
 ```{r, message=F}
 #suppress warnings
@@ -96,8 +96,9 @@ cereal.lty<-ifelse(test = cereal2$Shelf==1, yes = "solid",
                 no = ifelse(test = cereal2$Shelf==3, yes = "solid", no = "twodash")))
 
 parcoord(x = cereal3, col = cereal.colors, lty = cereal.lty)  # Plot
-legend(x = 3.35, y = 1.05, legend = c("Shelf 1", "Shelf 2", "Shelf 3", "Shelf 4"), lty = c("solid", "twodash", "solid", "twodash"),
-  col=c("cornsilk4", "coral2", "blueviolet","aquamarine3"), cex=0.8, bty="n")
+legend(x = 3.35, y = 1.05, legend = c("Shelf 1", "Shelf 2", "Shelf 3", "Shelf 4"), 
+       lty = c("solid", "twodash", "solid", "twodash"), 
+       col=c("cornsilk4", "coral2", "blueviolet","aquamarine3"), cex=0.8, bty="n")
 ```
 
 High sugar content seems to be most prevalent among Shelf 2. In addition, the cereals with lowest sugar content on shelf 2 had elevated fat and sodium content comparatively, indicating there is still an inflated flavor profile corresponding to likely less healthy but popular cereals.
@@ -132,22 +133,28 @@ In line with the EDA above, we see that sugar and sodium are the key discriminat
 ##(e) Show that there are no significant interactions among the explanatory variables (including an interaction among all three variables).
 
 ```{r}
-## Create expanded models including interaction terms between all pairs of explanatory variables and triple interaction between all 3.
+## Create expanded models including interaction terms between all pairs 
+## of explanatory variables and triple interaction between all 3.
 
-modA <- multinom(as.factor(Shelf) ~ sugar + fat + sodium + sugar:fat, data = cereal2)
+modA <- multinom(as.factor(Shelf) ~ sugar + fat + sodium + sugar:fat, 
+                 data = cereal2, maxit = 1000, trace=FALSE)
 Anova(modA)
 
-modB <- multinom(as.factor(Shelf) ~ sugar + fat + sodium + sugar:sodium, data = cereal2)
+modB <- multinom(as.factor(Shelf) ~ sugar + fat + sodium + sugar:sodium, 
+                 data = cereal2, maxit = 1000, trace=FALSE)
 Anova(modB)
 
-modC <- multinom(as.factor(Shelf) ~ sugar + fat + sodium + fat:sodium, data = cereal2)
+modC <- multinom(as.factor(Shelf) ~ sugar + fat + sodium + fat:sodium, 
+                 data = cereal2, maxit = 1000, trace=FALSE)
 Anova(modC)
 
-modD <- multinom(as.factor(Shelf) ~ sugar + fat + sodium + fat:sodium:sugar, data = cereal2)
+modD <- multinom(as.factor(Shelf) ~ sugar + fat + sodium + fat:sodium:sugar, 
+                 data = cereal2, maxit = 1000, trace=FALSE)
 Anova(modD)
 
 modE <- multinom(as.factor(Shelf) ~ sugar + fat + sodium + sugar:fat +
-                   sugar:sodium + fat:sodium + fat:sodium:sugar, data = cereal2)
+                   sugar:sodium + fat:sodium + fat:sodium:sugar, 
+                 data = cereal2, maxit = 10000, trace=FALSE)
 Anova(modE)
 ```
 
@@ -156,8 +163,9 @@ Looking at the significance values of the likelihood ratio tests for each additi
 ##(f) Kellogg's Apple Jacks (http://www.applejacks.com) is a cereal marketed toward children. For a serving size of 28 grams, its sugar content is 12 grams, fat content is 0.5 grams, and sodium content is 130 milligrams. Estimate the shelf probabilities for Apple Jacks.
 
 ```{r}
-stand.new <- function(meas, serv_size, comparison) {( meas/serv_size - min(comparison)) / (max(comparison) - min(comparison))}
-
+stand.new <- function(meas, serv_size, comparison) {
+  ( meas/serv_size - min(comparison)) / (max(comparison) - min(comparison))
+  }
 newdata <- data.frame(sugar = stand.new(12, 28, cereal$sugar_g/cereal$size_g), 
                       fat = stand.new(0.5, 28, cereal$fat_g/cereal$size_g),
                       sodium = stand.new(130, 28, cereal$sodium_mg/cereal$size_g))
@@ -170,78 +178,77 @@ From the above prediction, we see that Kellogg's Apple Jacks are most likely to 
 ##(g) Construct a plot similar to Figure 3.3 where the estimated probability for a shelf is on the y-axis and the sugar content is on the x-axis. Use the mean overall fat and sodium content as the corresponding variable values in the model. Interpret the plot with respect to sugar content.
 
 ```{r}
-beta.hat<-coefficients(mod1)
-beta.hat
+beta.h<-coefficients(mod1)
+beta.h
 mean_fat <- mean(cereal2$fat)
 mean_sodium <- mean(cereal2$sodium)
 
 
 # Create plotting area first to make sure get the whole region with respect to x-axis
-curve(expr = 1/(1 + exp(beta.hat[1,1] + beta.hat[1,2]*x) + exp(beta.hat[2,1] + beta.hat[2,2]*x)), ylab = expression(hat(pi)), xlab = "sugar",
-  xlim = c(min(cereal2$sugar), max(cereal2$sugar)), ylim = c(0, 1), col = "black", lty = "solid", lwd = 2, n = 1000, type = "n",
-  panel.first = grid(col = "gray", lty = "dotted"))
+curve(expr = 1/(1 + exp(beta.h[1,1] + beta.h[1,2]*x) +exp(beta.h[2,1] +beta.h[2,2]*x)), 
+      ylab = expression(hat(pi)),  xlab = "sugar", 
+      xlim = c(min(cereal2$sugar), max(cereal2$sugar)), 
+      ylim = c(0, 1), col = "black", lty = "solid", lwd = 2, n = 1000, type = "n",
+      panel.first = grid(col = "gray", lty = "dotted"))
 
 ## Plot each pi_j
 # Shelf1
-curve(expr = 1/(1 + exp(beta.hat[1,1] + beta.hat[1,2]*x + beta.hat[1,3]*mean_fat + beta.hat[1,4]*mean_sodium)
-                + exp(beta.hat[2,1] + beta.hat[2,2]*x + beta.hat[2,3]*mean_fat + beta.hat[2,4]*mean_sodium)
-                + exp(beta.hat[3,1] + beta.hat[3,2]*x + beta.hat[3,3]*mean_fat + beta.hat[3,4]*mean_sodium)),
+curve(expr = 1/(1 +exp(beta.h[1,1]+beta.h[1,2]*x+beta.h[1,3]*mean_fat+beta.h[1,4]*mean_sodium)
+                  +exp(beta.h[2,1]+beta.h[2,2]*x+beta.h[2,3]*mean_fat+beta.h[2,4]*mean_sodium)
+                  +exp(beta.h[3,1]+beta.h[3,2]*x+beta.h[3,3]*mean_fat+beta.h[3,4]*mean_sodium)),
   col = "black", lty = "solid", lwd = 2, n = 1000, add = TRUE,
   xlim = c(min(cereal2$sugar[cereal2$Shelf == 1]), max(cereal2$sugar[cereal2$Shelf == 1])))
 
-curve(expr = 1/(1 + exp(beta.hat[1,1] + beta.hat[1,2]*x + beta.hat[1,3]*mean_fat + beta.hat[1,4]*mean_sodium)
-                + exp(beta.hat[2,1] + beta.hat[2,2]*x + beta.hat[2,3]*mean_fat + beta.hat[2,4]*mean_sodium)
-                + exp(beta.hat[3,1] + beta.hat[3,2]*x + beta.hat[3,3]*mean_fat + beta.hat[3,4]*mean_sodium)),
+curve(expr = 1/(1 +exp(beta.h[1,1]+beta.h[1,2]*x+beta.h[1,3]*mean_fat+beta.h[1,4]*mean_sodium)
+                  +exp(beta.h[2,1]+beta.h[2,2]*x+beta.h[2,3]*mean_fat+beta.h[2,4]*mean_sodium)
+                  +exp(beta.h[3,1]+beta.h[3,2]*x+beta.h[3,3]*mean_fat+beta.h[3,4]*mean_sodium)),
   col = "black", lty = "dotdash", lwd = 2, n = 1000, add = TRUE,
   xlim = c(0,1))
 
 # Shelf2
-curve(expr = exp(beta.hat[1,1] + beta.hat[1,2]*x + beta.hat[1,3]*mean_fat + beta.hat[1,4]*mean_sodium)/
-        (1 + exp(beta.hat[1,1] + beta.hat[1,2]*x + beta.hat[1,3]*mean_fat + beta.hat[1,4]*mean_sodium)
-                + exp(beta.hat[2,1] + beta.hat[2,2]*x + beta.hat[2,3]*mean_fat + beta.hat[2,4]*mean_sodium)
-                + exp(beta.hat[3,1] + beta.hat[3,2]*x + beta.hat[3,3]*mean_fat + beta.hat[3,4]*mean_sodium)), 
+curve(expr = exp(beta.h[1,1]+beta.h[1,2]*x+beta.h[1,3]*mean_fat+beta.h[1,4]*mean_sodium)/
+               (1+exp(beta.h[1,1]+beta.h[1,2]*x+beta.h[1,3]*mean_fat+beta.h[1,4]*mean_sodium)
+                 +exp(beta.h[2,1]+beta.h[2,2]*x+beta.h[2,3]*mean_fat+beta.h[2,4]*mean_sodium)
+                 +exp(beta.h[3,1]+beta.h[3,2]*x+beta.h[3,3]*mean_fat+beta.h[3,4]*mean_sodium)), 
       col = "green", lty = "solid", lwd = 2, n = 1000, add = TRUE, 
       xlim = c(min(cereal2$sugar[cereal2$Shelf == 2]), max(cereal2$sugar[cereal2$Shelf == 2])))
 
-curve(expr = exp(beta.hat[1,1] + beta.hat[1,2]*x + beta.hat[1,3]*mean_fat + beta.hat[1,4]*mean_sodium)/
-        (1 + exp(beta.hat[1,1] + beta.hat[1,2]*x + beta.hat[1,3]*mean_fat + beta.hat[1,4]*mean_sodium)
-                + exp(beta.hat[2,1] + beta.hat[2,2]*x + beta.hat[2,3]*mean_fat + beta.hat[2,4]*mean_sodium)
-                + exp(beta.hat[3,1] + beta.hat[3,2]*x + beta.hat[3,3]*mean_fat + beta.hat[3,4]*mean_sodium)), 
+curve(expr = exp(beta.h[1,1]+beta.h[1,2]*x+beta.h[1,3]*mean_fat+beta.h[1,4]*mean_sodium)/
+               (1+exp(beta.h[1,1]+beta.h[1,2]*x+beta.h[1,3]*mean_fat+beta.h[1,4]*mean_sodium)
+                 +exp(beta.h[2,1]+beta.h[2,2]*x+beta.h[2,3]*mean_fat+beta.h[2,4]*mean_sodium)
+                 +exp(beta.h[3,1]+beta.h[3,2]*x+beta.h[3,3]*mean_fat+beta.h[3,4]*mean_sodium)), 
       col = "green", lty = "dotdash", lwd = 2, n = 1000, add = TRUE, 
       xlim = c(0,1))
 
 # Shelf3
-curve(expr = exp(beta.hat[2,1] + beta.hat[2,2]*x + beta.hat[2,3]*mean_fat + beta.hat[2,4]*mean_sodium)/
-        (1 + exp(beta.hat[1,1] + beta.hat[1,2]*x + beta.hat[1,3]*mean_fat + beta.hat[1,4]*mean_sodium)
-                + exp(beta.hat[2,1] + beta.hat[2,2]*x + beta.hat[2,3]*mean_fat + beta.hat[2,4]*mean_sodium)
-                + exp(beta.hat[3,1] + beta.hat[3,2]*x + beta.hat[3,3]*mean_fat + beta.hat[3,4]*mean_sodium)),
+curve(expr = exp(beta.h[2,1]+beta.h[2,2]*x+beta.h[2,3]*mean_fat+beta.h[2,4]*mean_sodium)/
+               (1+exp(beta.h[1,1]+beta.h[1,2]*x+beta.h[1,3]*mean_fat+beta.h[1,4]*mean_sodium)
+                 +exp(beta.h[2,1]+beta.h[2,2]*x+beta.h[2,3]*mean_fat+beta.h[2,4]*mean_sodium)
+                 +exp(beta.h[3,1]+beta.h[3,2]*x+beta.h[3,3]*mean_fat+beta.h[3,4]*mean_sodium)),
   col = "red", lty = "solid", lwd = 2, n = 1000, add = TRUE,
   xlim = c(min(cereal2$sugar[cereal2$Shelf == 3]), max(cereal2$sugar[cereal2$Shelf == 3])))
 
-curve(expr = exp(beta.hat[2,1] + beta.hat[2,2]*x + beta.hat[2,3]*mean_fat + beta.hat[2,4]*mean_sodium)/
-        (1 + exp(beta.hat[1,1] + beta.hat[1,2]*x + beta.hat[1,3]*mean_fat + beta.hat[1,4]*mean_sodium)
-                + exp(beta.hat[2,1] + beta.hat[2,2]*x + beta.hat[2,3]*mean_fat + beta.hat[2,4]*mean_sodium)
-                + exp(beta.hat[3,1] + beta.hat[3,2]*x + beta.hat[3,3]*mean_fat + beta.hat[3,4]*mean_sodium)),
+curve(expr = exp(beta.h[2,1]+beta.h[2,2]*x+beta.h[2,3]*mean_fat+beta.h[2,4]*mean_sodium)/
+               (1+exp(beta.h[1,1]+beta.h[1,2]*x+beta.h[1,3]*mean_fat+beta.h[1,4]*mean_sodium)
+                 +exp(beta.h[2,1]+beta.h[2,2]*x+beta.h[2,3]*mean_fat+beta.h[2,4]*mean_sodium)
+                 +exp(beta.h[3,1]+beta.h[3,2]*x+beta.h[3,3]*mean_fat+beta.h[3,4]*mean_sodium)),
   col = "red", lty = "dotdash", lwd = 2, n = 1000, add = TRUE,
   xlim = c(0,1))
 
 # Shelf4
-curve(expr = exp(beta.hat[3,1] + beta.hat[3,2]*x + beta.hat[3,3]*mean_fat + beta.hat[3,4]*mean_sodium)/
-        (1 + exp(beta.hat[1,1] + beta.hat[1,2]*x + beta.hat[1,3]*mean_fat + beta.hat[1,4]*mean_sodium)
-                + exp(beta.hat[2,1] + beta.hat[2,2]*x + beta.hat[2,3]*mean_fat + beta.hat[2,4]*mean_sodium)
-                + exp(beta.hat[3,1] + beta.hat[3,2]*x + beta.hat[3,3]*mean_fat + beta.hat[3,4]*mean_sodium)),
+curve(expr = exp(beta.h[3,1]+beta.h[3,2]*x+beta.h[3,3]*mean_fat+beta.h[3,4]*mean_sodium)/
+               (1+exp(beta.h[1,1]+beta.h[1,2]*x+beta.h[1,3]*mean_fat+beta.h[1,4]*mean_sodium)
+                 +exp(beta.h[2,1]+beta.h[2,2]*x+beta.h[2,3]*mean_fat+beta.h[2,4]*mean_sodium)
+                 +exp(beta.h[3,1]+beta.h[3,2]*x+beta.h[3,3]*mean_fat+beta.h[3,4]*mean_sodium)),
   col = "blue", lty = "solid", lwd = 2, n = 1000, add = TRUE,
   xlim = c(min(cereal2$sugar[cereal2$Shelf == 4]), max(cereal2$sugar[cereal2$Shelf == 4])))   
 
-curve(expr = exp(beta.hat[3,1] + beta.hat[3,2]*x + beta.hat[3,3]*mean_fat + beta.hat[3,4]*mean_sodium)/
-        (1 + exp(beta.hat[1,1] + beta.hat[1,2]*x + beta.hat[1,3]*mean_fat + beta.hat[1,4]*mean_sodium)
-                + exp(beta.hat[2,1] + beta.hat[2,2]*x + beta.hat[2,3]*mean_fat + beta.hat[2,4]*mean_sodium)
-                + exp(beta.hat[3,1] + beta.hat[3,2]*x + beta.hat[3,3]*mean_fat + beta.hat[3,4]*mean_sodium)),
+curve(expr = exp(beta.h[3,1]+beta.h[3,2]*x+beta.h[3,3]*mean_fat+beta.h[3,4]*mean_sodium)/
+               (1+exp(beta.h[1,1]+beta.h[1,2]*x+beta.h[1,3]*mean_fat+beta.h[1,4]*mean_sodium)
+                 +exp(beta.h[2,1]+beta.h[2,2]*x+beta.h[2,3]*mean_fat+beta.h[2,4]*mean_sodium)
+                 +exp(beta.h[3,1]+beta.h[3,2]*x+beta.h[3,3]*mean_fat+beta.h[3,4]*mean_sodium)),
   col = "blue", lty = "dotdash", lwd = 2, n = 1000, add = TRUE,
   xlim = c(0,1))
-
-
-
 
 legend(x = 0.5, y = 1.0, legend=c("Shelf 1", "Shelf 2", "Shelf 3", "Shelf 4"), 
        lty=c("solid","solid", "solid", "solid"),
@@ -278,7 +285,8 @@ mid = exp(c.value*beta.hat2)
 # Odds ratios and corresponding 95% confidence interval's lower (2.5%) and upper (97.5%) bounds 
 round(data.frame(Lower_Bound = ci.OR[,1,1], Odds_Ratio = mid, Upper_Bound = ci.OR[,2,1]),4)
 # Inverted confidence interval for significant variables for Shelf 2 vs Shelf 1
-round(data.frame(Lower_Bound = 1/ci.OR[3,2,1], Odds_Ratio = 1/mid[3], Upper_Bound = 1/ci.OR[3,1,1]),4)
+round(data.frame(Lower_Bound = 1/ci.OR[3,2,1], Odds_Ratio = 1/mid[3], 
+                 Upper_Bound = 1/ci.OR[3,1,1]),4)
 ```
 
 For shelf 2 vs shelf 1, we see that only sodium yields a significant result, telling us with 95% confidence that the odds of a cereal being on shelf 1 instead of shelf 2 change by between 2.28 and 1363.37 times for a 0.23 of scaled sodium. That sugar is not significant is marginally surprising, however looking at the boxplots, we note that a large portion of the cereals on shelf 1 have comparable sugar levels to those on shelf 2, and it is only due to a cluster with very low sugar levels on shelf 1 that any large difference is apparent, however clearly sodium is signficantly different between the shelves in the boxplots, thus this result is expected.
@@ -290,7 +298,8 @@ mid = exp(c.value*beta.hat3)
 # Odds ratios and corresponding 95% confidence interval's lower (2.5%) and upper (97.5%) bounds 
 round(data.frame(Lower_Bound = ci.OR[,1,2], Odds_Ratio = mid, Upper_Bound = ci.OR[,2,2]),4)
 # Inverted confidence interval for significant variables for Shelf 3 vs Shelf 1
-round(data.frame(Lower_Bound = 1/ci.OR[c(1,3),2,2], Odds_Ratio = 1/mid[c(1,3)], Upper_Bound = 1/ci.OR[c(1,3),1,2]),4)
+round(data.frame(Lower_Bound = 1/ci.OR[c(1,3),2,2], Odds_Ratio = 1/mid[c(1,3)], 
+                 Upper_Bound = 1/ci.OR[c(1,3),1,2]),4)
 ```
 
 For shelf 3 vs shelf 1, both sugar and sodium are significant, saying with 95% confidence that the odds of cereal being on shelf 1 instead of shelf 3 change by between 2.03 and 353.48 times for a 0.27 increase in scaled sugar as well as 95% confidence that the odds of cereal being on shelf 1 instead of shelf 3 change by between 8.17 and 11859.32 times for a 0.23 increase in scaled sodium. Unsurprisingly from looking at the boxplots, both sugar and sodium are significant discriminating factors between cereals on shelf 3 vs shelf 1, given that they have fairly low sugar content and even lower sodium than those on shelf 2. 
@@ -302,7 +311,8 @@ mid = exp(c.value*beta.hat4)
 # Odds ratios and corresponding 95% confidence interval's lower (2.5%) and upper (97.5%) bounds 
 round(data.frame(Lower_Bound = ci.OR[,1,3], Odds_Ratio = mid, Upper_Bound = ci.OR[,2,3]),4)
 # Inverted confidence interval for significant variables for Shelf 4 vs Shelf 1
-round(data.frame(Lower_Bound = 1/ci.OR[c(1,3),2,3], Odds_Ratio = 1/mid[c(1,3)], Upper_Bound = 1/ci.OR[c(1,3),1,3]),4)
+round(data.frame(Lower_Bound = 1/ci.OR[c(1,3),2,3], Odds_Ratio = 1/mid[c(1,3)], 
+                 Upper_Bound = 1/ci.OR[c(1,3),1,3]),4)
 ```
 
 For shelf 4 vs shelf 1, again both sugar and sodium are significant, saying with 95% that the odds of cereal being on shelf 1 instead of shelf 4 change by between 1.64 and 280.78 times for a 0.27 increase in scaled sugar as well as 95% confidence that the odds of cereal being on shelf 1 instead of shelf 4 change by between 7.68 and 10968.22 times for a 0.27 increase in scaled sodium, which is close to that of shelf 3 for the same reasons.
@@ -319,9 +329,11 @@ beta.hat4.new<-coefficients(mod.fit)[3,2:4]
 print("OR for j = 3 vs j = 2")
 mid = exp(c.value*beta.hat3.new)
 # Odds ratios and corresponding 95% confidence interval's lower (2.5%) and upper (97.5%) bounds 
-round(data.frame(Lower_Bound = ci.OR.new[,1,2], Odds_Ratio = mid, Upper_Bound = ci.OR.new[,2,2]),4)
+round(data.frame(Lower_Bound = ci.OR.new[,1,2], Odds_Ratio = mid, 
+                 Upper_Bound = ci.OR.new[,2,2]),4)
 # Inverted confidence interval for significant variables for Shelf 3 vs Shelf 2
-round(data.frame(Lower_Bound = 1/ci.OR.new[1,2,2], Odds_Ratio = 1/mid[1], Upper_Bound = 1/ci.OR.new[1,1,2]),4)
+round(data.frame(Lower_Bound = 1/ci.OR.new[1,2,2], Odds_Ratio = 1/mid[1], 
+                 Upper_Bound = 1/ci.OR.new[1,1,2]),4)
 ```
 
 For shelf 3 vs shelf 2, only sugar is significant, telling us with 95% confidence that the odds of a cereal being on shelf 2 instead of shelf 3 change by between 3.84 and 799.84 times for a 0.27 increase in scaled sugar. This corresponds to the consistently low level of sugar in cereals on shelf 3 and comparatively very elevated levels of sugar of cereals on shelf 2, whereas there is no clear difference in sodium or fat between cereals on the two shelves.
@@ -331,9 +343,11 @@ For shelf 3 vs shelf 2, only sugar is significant, telling us with 95% confidenc
 print("OR for j = 4 vs j = 2")
 mid = exp(c.value*beta.hat4.new)
 # Odds ratios and corresponding 95% confidence interval's lower (2.5%) and upper (97.5%) bounds 
-round(data.frame(Lower_Bound = ci.OR.new[,1,3], Odds_Ratio = mid, Upper_Bound = ci.OR.new[,2,3]),2)
+round(data.frame(Lower_Bound = ci.OR.new[,1,3], Odds_Ratio = mid, 
+                 Upper_Bound = ci.OR.new[,2,3]),2)
 # Inverted confidence interval for significant variables for Shelf 4 vs Shelf 2
-round(data.frame(Lower_Bound = 1/ci.OR.new[1,2,3], Odds_Ratio = 1/mid[1], Upper_Bound = 1/ci.OR.new[1,1,3]),4)
+round(data.frame(Lower_Bound = 1/ci.OR.new[1,2,3], Odds_Ratio = 1/mid[1], 
+                 Upper_Bound = 1/ci.OR.new[1,1,3]),4)
 ```
 
 For shelf 4 vs shelf 2, again only sugar is significant, telling us with 95% confidence that the odds of a cereal being on shelf 2 instead of shelf 4 change by between 3.19 and 617.74 times for a 0.27 increase in scaled sugar. Again, given the fairly similar levels of sugar, fat and sodium in cereals on shelves 3 and 4, most notably low sugar levels, and relatively elevated sugar levels but more average levels of fat and sodium of cereals on shelf 2, only sugar has a significant effect on the odds ratio between shelves 4 and 2.
@@ -349,7 +363,8 @@ beta.hat4.new<-coefficients(mod.fit)[3,2:4]
 print("OR for j = 4 vs j = 3")
 mid = exp(c.value*beta.hat4.new)
 # Odds ratios and corresponding 95% confidence interval's lower (2.5%) and upper (97.5%) bounds 
-round(data.frame(Lower_Bound = ci.OR.new[,1,3], Odds_Ratio = mid, Upper_Bound = ci.OR.new[,2,3]),4)
+round(data.frame(Lower_Bound = ci.OR.new[,1,3], Odds_Ratio = mid, 
+                 Upper_Bound = ci.OR.new[,2,3]),4)
 ```
 
 For shelf 4 vs shelf 3, there are no significant variables and further estimated odd ratios for all explanatory variables are very close to 1, corresponding to the very similar values across all three explanatory variables for cereals on these two shelves.
