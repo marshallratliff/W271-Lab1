@@ -276,51 +276,74 @@ beta.hat4<-coefficients(mod1)[3,2:4]
 
 # OR for j = 2 (Shelf 2 vs Shelf 1)
 print("OR for j = 2 vs j = 1")
-mid2 = exp(c.value*beta.hat2)
-round(mid2,2)
-round(1/mid2,2)
-round(data.frame(low = ci.OR[,1,1], mid = mid2, up = ci.OR[,2,1]),2)
+mid = exp(c.value*beta.hat2)
+round(mid,4)
+round(1/mid,4)
+round(data.frame(low = ci.OR[,1,1], mid = mid, up = ci.OR[,2,1]),4)
+# Significant variables
+round(data.frame(low = 1/ci.OR[3,2,1], mid = 1/mid[3], up = 1/ci.OR[3,1,1]),4)
 
 # OR for j = 3 (Shelf 3 vs Shelf 1)
 print("OR for j = 3 vs j = 1")
-mid3 = exp(c.value*beta.hat3)
-round(mid3,2)
-round(1/mid3,2)
-round(data.frame(low = ci.OR[,1,2], mid = mid3, up = ci.OR[,2,2]),2)
+mid = exp(c.value*beta.hat3)
+round(mid,4)
+round(1/mid,4)
+round(data.frame(low = ci.OR[,1,2], mid = mid, up = ci.OR[,2,2]),4)
+# Significant variables
+round(data.frame(low = 1/ci.OR[c(1,3),2,2], mid = 1/mid[c(1,3)], up = 1/ci.OR[c(1,3),1,2]),4)
 
 # OR for j = 4 (Shelf 4 vs Shelf 1)
 print("OR for j = 3 vs j = 1")
-mid4 = exp(c.value*beta.hat4)
-round(mid4,2)
-round(1/mid4,2)
-round(data.frame(low = ci.OR[,1,3], mid = mid4, up = ci.OR[,2,3]),2)
+mid = exp(c.value*beta.hat4)
+round(mid,4)
+round(1/mid,4)
+round(data.frame(low = ci.OR[,1,3], mid = mid, up = ci.OR[,2,3]),4)
+# Significant variables
+round(data.frame(low = 1/ci.OR[c(1,3),2,3], mid = 1/mid[c(1,3)], up = 1/ci.OR[c(1,3),1,3]),4)
+
+cereal2$new_shelf <- relevel(as.factor(cereal2$Shelf),"2")
+mod.fit <- multinom(new_shelf ~ sugar + fat + sodium, data = cereal2)
+conf.beta.new <- confint(object = mod.fit, level = 0.95)
+ci.OR.new <- exp(c.value*conf.beta.new[2:4,1:2,])
+beta.hat3.new<-coefficients(mod.fit)[2,2:4]
+beta.hat4.new<-coefficients(mod.fit)[3,2:4]
 
 # OR for j = 3 (Shelf 3 vs Shelf 2)
 print("OR for j = 3 vs j = 2")
-mid = exp(c.value*beta.hat3-c.value*beta.hat2)
-round(mid,2)
-round(1/mid,2)
-low = apply(matrix(c(ci.OR[,1,2]/mid2,mid3/ci.OR[,2,1]),3),1,min)
-up = apply(matrix(c(ci.OR[,2,2]/mid2,mid3/ci.OR[,1,1]),3),1,max)
-round(data.frame(low = low, mid = mid, up = up),2)
+mid = exp(c.value*beta.hat3.new)
+round(mid,4)
+round(1/mid,4)
+round(data.frame(low = ci.OR.new[,1,2], mid = mid, up = ci.OR.new[,2,2]),4)
+# Significant variables
+round(data.frame(low = 1/ci.OR.new[1,2,2], mid = 1/mid[1], up = 1/ci.OR.new[1,1,2]),4)
 
-# OR for j = 4 (Shelf 3 vs Shelf 2)
+# OR for j = 4 (Shelf 4 vs Shelf 2)
 print("OR for j = 4 vs j = 2")
-mid = exp(c.value*beta.hat4-c.value*beta.hat2)
-round(mid,2)
-round(1/mid,2)
-low = apply(matrix(c(ci.OR[,1,3]/mid2,mid4/ci.OR[,2,1]),3),1,min)
-up = apply(matrix(c(ci.OR[,2,3]/mid2,mid4/ci.OR[,1,1]),3),1,max)
-round(data.frame(low = low, mid = mid, up = up),2)
+mid = exp(c.value*beta.hat4.new)
+round(mid,4)
+round(1/mid,4)
+round(data.frame(low = ci.OR.new[,1,3], mid = mid, up = ci.OR.new[,2,3]),2)
+# Significant variables
+round(data.frame(low = 1/ci.OR.new[1,2,3], mid = 1/mid[1], up = 1/ci.OR.new[1,1,3]),4)
+
+cereal2$new_shelf <- relevel(as.factor(cereal2$Shelf),"3")
+mod.fit <- multinom(new_shelf ~ sugar + fat + sodium, data = cereal2)
+conf.beta.new <- confint(object = mod.fit, level = 0.95)
+ci.OR.new <- exp(c.value*conf.beta.new[2:4,1:2,])
+beta.hat4.new<-coefficients(mod.fit)[3,2:4]
 
 # OR for j = 4 (Shelf 3 vs Shelf 3)
 print("OR for j = 4 vs j = 3")
-mid = exp(c.value*beta.hat4-c.value*beta.hat3)
-round(mid,2)
-round(1/mid,2)
-low = apply(matrix(c(ci.OR[,1,3]/mid3,mid4/ci.OR[,2,2]),3),1,min)
-up = apply(matrix(c(ci.OR[,2,3]/mid3,mid4/ci.OR[,1,2]),3),1,max)
-round(data.frame(low = low, mid = mid, up = up),2)
+mid = exp(c.value*beta.hat4.new)
+round(mid,4)
+round(1/mid,4)
+round(data.frame(low = ci.OR.new[,1,3], mid = mid, up = ci.OR.new[,2,3]),4)
 ```
 
-*Key to-do: Add Confidence interval tables for each explanatory variable for each pair of shelves. Compare to plots above and in EDA. Refer to pages 160-163 in the book for guidance
+Using the confidence intervals computed for the odds ratio for each explanatory variable for each pair of shelves, we can conduct hypothesis tests to determine whether a given explanatory variable has a statistically significant effect on the odds ratio between the two shelves, in particular by determining if the ratio of 1 is outside the bounds of the 95% confidence interval, in which case we can reject the null hypothesis that the variable in question has no discriminating power between the two shelves. 
+For shelf 2 vs shelf 1, we see that only sodium yields a significant result, telling us with 95% confidence that the odds of a cereal being on shelf 1 instead of shelf 2 change by between 2.28 and 1363.37 times for a 0.23 of scaled sodium. That sugar is not significant is marginally surprising, however looking at the boxplots, we note that a large portion of the cereals on shelf 1 have comparable sugar levels to those on shelf 2, and it is only due to a cluster with very low sugar levels on shelf 1 that any large difference is apparent, however clearly sodium is signficantly different between the shelves in the boxplots, thus this result is expected. 
+For shelf 3 vs shelf 1, both sugar and sodium are significant, saying with 95% confidence that the odds of cereal being on shelf 1 instead of shelf 3 change by between 2.03 and 353.48 times for a 0.27 increase in scaled sugar as well as 95% confidence that the odds of cereal being on shelf 1 instead of shelf 3 change by between 8.17 and 11859.32 times for a 0.23 increase in scaled sodium. Unsurprisingly from looking at the boxplots, both sugar and sodium are significant discriminating factors between cereals on shelf 3 vs shelf 1, given that they have fairly low sugar content and even lower sodium than those on shelf 2. 
+For shelf 4 vs shelf 1, again both sugar and sodium are significant, saying with 95% that the odds of cereal being on shelf 1 instead of shelf 4 change by between 1.64 and 280.78 times for a 0.27 increase in scaled sugar as well as 95% confidence that the odds of cereal being on shelf 1 instead of shelf 4 change by between 7.68 and 10968.22 times for a 0.27 increase in scaled sodium, which is close to that of shelf 3 for the same reasons.
+For shelf 3 vs shelf 2, only sugar is significant, telling us with 95% confidence that the odds of a cereal being on shelf 2 instead of shelf 3 change by between 3.84 and 799.84 times for a 0.27 increase in scaled sugar.
+For shelf 4 vs shelf 2, again only sugar is significant, telling us with 95% confidence that the odds of a cereal being on shelf 2 instead of shelf 4 change by between 3.19 and 617.74 times for a 0.27 increase in scaled sugar. Both of these correspond to the fairly similar levels of sugar in cereals on shelves 3 and 4 and relatively elevated sugar levels of cereals on shelf 2.
+For shelf 4 vs shelf 3, there are no significant variables, corresponding to the very similar values across all three explanatory variables for cereals on these two shelves.
