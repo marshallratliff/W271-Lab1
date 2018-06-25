@@ -40,7 +40,6 @@ skim(cereal)
 
 There are 7 variables with 40 observations evenly distributed across 4 shelves. There's no missing data. There are 38 types of cereal, with sugar content ranging 0 to 20 gram, fat content ranging from 0 to 5 gram, sodium content from 0 to 330 gram, serving size ranging 27 to 60 gram.
 
-*Additional Notes: add scatterplotmatrix for explanatory vars.
 ```{r, message=F}
 #suppress warnings
 oldw <- getOption("warn")
@@ -101,19 +100,19 @@ legend(x = 3.35, y = 1.05, legend = c("Shelf 1", "Shelf 2", "Shelf 3", "Shelf 4"
   col=c("cornsilk4", "coral2", "blueviolet","aquamarine3"), cex=0.8, bty="n")
 ```
 
-High sugar content seems to be most prevalent among Shelf 2. The other shelves have a pretty wide spread of sugar content, with means roughly in the same places. Of note is Shelf 1's bimodal distribution of sugar, with one cluster of cereals with nearly no sugar and the other cluster having above average sugar content. Without that low sugar cluster, the rest of the shelf would have a mean sugar content much closer to Shelf 2.
+High sugar content seems to be most prevalent among Shelf 2. In addition, the cereals with lowest sugar content on shelf 2 had elevated fat and sodium content comparatively, indicating there is still an inflated flavor profile corresponding to likely less healthy but popular cereals.
+
+The other shelves have a pretty wide spread of sugar content, with means roughly in the same places. Of note is Shelf 1's bimodal distribution of sugar, with one cluster of cereals with nearly no sugar and the other cluster having above average sugar content. Without that low sugar cluster, the rest of the shelf would have a mean sugar content much closer to Shelf 2.
 
 Fat content seems to be pretty evenly distributed across shelves. In cereal this most likely corresponds to contents like nuts and oilseeds. There is a heavy occurrence of fat content at both extremes (1 and 0). Shelf 1 has so many 0 fat score cereals that its mean is lower than the others. Perhaps also notable is that shelf 2 is the only shelf with no cereals with a 0 score for fat, and that shelf 4 is the only shelf with no cereals with a 1 score, but visually, that information does not add muchin light of the rest of the fat content plots.
 
 Sodium content is notably highest on Shelf 1, but otherwise the other shelves have a more or less similar mean, with Shelf 3 showing the most breadth of sodium levels within that shelf. 
 
-*Additional Notes: The cereals with lowest sugar content on shelf 2 had elevated fat and sodium content comparatively, indicating there is still an inflated flavor profile corresponding to likely less healthy but popular cereals. **Check that reordering matches our analysis*
-
 ##(c) The response has values of 1, 2, 3, and 4. Under what setting would it be desirable to take into account ordinality. Do you think this occurs here?
 
-Answer: If we believed that there was a natural ordering to the shelves, or that they could be arranged in an order such that shelf 1 < shelf 2 < shelf 3, etc. - then we would be desirable to take into account ordinality (especially if we believed that the "distance" between each level were equal). However, we do not believe that is the case with this data, as it is not clear whether being on a low shelf is objectively better than on a high shelf, or vice versa. There are attractors/detractors from each shelf height and for different customers - for example, children are at the height of lower shelves than adults are - but that ordering is not universal and therefore not desireable to take into account in our modeling.  If other data could be brought in that demonstrated the desirability or marketability of each shelf had some order (which probably does exist), that could also be used as a factor for ordinality.
+Answer: If we believed that there was a natural ordering to the shelves, or that they could be arranged in an order such that shelf 1 < shelf 2 < shelf 3, etc. - then it would be desirable to take into account ordinality (especially if we believed that the "distance" between each level was constant). However, we do not believe that is the case with this data, as it is not clear whether being on a low shelf is objectively better than on a high shelf, or vice versa. There are attractors/detractors from each shelf height and for different customers - for example, children are at the height of lower shelves than adults are - but that ordering is not universal and therefore not desireable to take into account in our modeling.  If other data could be brought in that demonstrated the desirability or marketability of each shelf had some order (which probably does exist), that could also be used as a factor for ordinality.
 
-*Additional Notes: The most significant factors are target audience and some metric of difficulty/ease of reaching a given shelf. If we had stats on shelf heights and arm lengths of target customer groups it may be possible to rank the shelves in a meaningful way. It seems likely that shelves 2 or 3 is highest priority for most products, however given the sensitivity to children for this product segment clearly shelf 2 is highest priority, shelf 4 is lowest, and it is probably difficult to distinguish shelves 1 and 3 but perhaps 1 continues to cater more toward children and 3 more toward adults. In any case, there is still no immediately apparent ordinality aside from a clear distinction between shelf 2 and shelf 4.
+For example, the most significant factors for shelf ordering are probably target audience of the product and some metric of difficulty/ease of reaching a given shelf. If we had stats on shelf heights and arm lengths of target customer groups it may be possible to rank the shelves in a meaningful way. It seems likely that shelves 2 or 3 is highest priority for most products, however given the sensitivity to children for this product segment clearly, shelf 2 is highest priority, shelf 4 is lowest, and it is probably difficult to distinguish shelves 1 and 3 but perhaps 1 continues to cater more toward children and 3 more toward adults. This is reflected by the clustering of sugary cereals on shelves 1 & 2. In any case, there is still no immediately apparent ordinality aside from a clear distinction between shelf 2 and shelf 4, thus it seems inappropriate to take into accound ordinality in this example.
 
 ##(d) Estimate a multinomial regression model with linear forms of the sugar, fat, and sodium variables. Perform LRTs to examine the importance of each explanatory variable.
 
@@ -126,7 +125,7 @@ Anova(mod1)
 
 * We cannot use mcprofile package for likelihood ratio, as nnet package author does not believe that one at a time intervals should be calculated. We use value of c equal to 1 standard deviation instead. *
 
-*Additional note: Sugar and Sodium are key discriminating factors both in terms of Log Likelihood and Significance.
+In line with the EDA above, we see that sugar and sodium are the key discriminating factors both in terms of likelihood ratios and statistical significance. Specifically, we see that increases in sodium levels correspond to decreased likelihood of all other shelves compared to the base-case of shelf 1, and increases in sugar levels correspond to decreased likelihood of shelves 3 & 4 compared to the base-case of shelf 1, but conversely a somewhat increased likelihood of shelf 2 relative to the base-case of shelf 1.
 
 ##(e) Show that there are no significant interactions among the explanatory variables (including an interaction among all three variables).
 
@@ -150,7 +149,7 @@ modE <- multinom(as.factor(Shelf) ~ sugar + fat + sodium + sugar:fat +
 Anova(modE)
 ```
 
-Looking at the significance values of the likelihood ratio tests for each additional interaction term none of them are even marginally significant, and the individual term significances remain fairly stable in significance levels.
+Looking at the significance values of the likelihood ratio tests for each additional interaction term none of them are even marginally significant, and the individual term significances remain fairly stable in significance levels. As such we can reject incorporating any of these interaction terms in our final model.
 
 ##(f) Kellogg's Apple Jacks (http://www.applejacks.com) is a cereal marketed toward children. For a serving size of 28 grams, its sugar content is 12 grams, fat content is 0.5 grams, and sodium content is 130 milligrams. Estimate the shelf probabilities for Apple Jacks.
 
@@ -168,33 +167,7 @@ From the above prediction, we see that Kellogg's Apple Jacks are most likely to 
 
 ##(g) Construct a plot similar to Figure 3.3 where the estimated probability for a shelf is on the y-axis and the sugar content is on the x-axis. Use the mean overall fat and sodium content as the corresponding variable values in the model. Interpret the plot with respect to sugar content.
 
-Alice's solution:
-
 ```{r}
-newfat <- c(rep(mean(cereal2$fat),11))
-newsodium <- c(rep(mean(cereal2$sodium),11))
-newsugar <- c(seq(0,1, 0.1))
-simulated.data <- data.frame(sugar=newsugar, fat=newfat, sodium=newsodium)
-pi.hat.sim <-predict(mod1, newdata=simulated.data, type="probs")
-plot.new()
-x<- seq(0,1,0.1)
-plot(x,pi.hat.sim[,1],type='l',col="blue",
-     ylim=range(min(pi.hat.sim), max(pi.hat.sim)),
-     xlab = "Sugar", ylab = "predicted probability")
-lines(x, pi.hat.sim[,2], col="gray")
-lines(x, pi.hat.sim[,3], col="red")
-lines(x, pi.hat.sim[,4], col="green")
-
-legend(x = 0.4, y = 0.85 , legend = c("Shelf 1", "Shelf 2", "Shelf 3", "Shelf 4"), col=c("blue","gray","red","green"),lty = "solid")
-
-```
-
-Jessica's solution:
-
-```{r}
-## Open question: in figure 3.3, they have each line stop at the min/max for each type of kernel (equivalent to each shelf in our example). Is this what we want, or do we want it to go from 0 to 1 for each shelf? (code for both below, 0-1 is commented out.)
-
-
 beta.hat<-coefficients(mod1)
 beta.hat
 mean_fat <- mean(cereal2$fat)
@@ -213,50 +186,71 @@ curve(expr = 1/(1 + exp(beta.hat[1,1] + beta.hat[1,2]*x + beta.hat[1,3]*mean_fat
                 + exp(beta.hat[3,1] + beta.hat[3,2]*x + beta.hat[3,3]*mean_fat + beta.hat[3,4]*mean_sodium)),
   col = "black", lty = "solid", lwd = 2, n = 1000, add = TRUE,
   xlim = c(min(cereal2$sugar[cereal2$Shelf == 1]), max(cereal2$sugar[cereal2$Shelf == 1])))
-  # xlim = c(0,1))  
+
+curve(expr = 1/(1 + exp(beta.hat[1,1] + beta.hat[1,2]*x + beta.hat[1,3]*mean_fat + beta.hat[1,4]*mean_sodium)
+                + exp(beta.hat[2,1] + beta.hat[2,2]*x + beta.hat[2,3]*mean_fat + beta.hat[2,4]*mean_sodium)
+                + exp(beta.hat[3,1] + beta.hat[3,2]*x + beta.hat[3,3]*mean_fat + beta.hat[3,4]*mean_sodium)),
+  col = "black", lty = "dotdash", lwd = 2, n = 1000, add = TRUE,
+  xlim = c(0,1))
 
 # Shelf2
 curve(expr = exp(beta.hat[1,1] + beta.hat[1,2]*x + beta.hat[1,3]*mean_fat + beta.hat[1,4]*mean_sodium)/
         (1 + exp(beta.hat[1,1] + beta.hat[1,2]*x + beta.hat[1,3]*mean_fat + beta.hat[1,4]*mean_sodium)
                 + exp(beta.hat[2,1] + beta.hat[2,2]*x + beta.hat[2,3]*mean_fat + beta.hat[2,4]*mean_sodium)
                 + exp(beta.hat[3,1] + beta.hat[3,2]*x + beta.hat[3,3]*mean_fat + beta.hat[3,4]*mean_sodium)), 
-      col = "green", lty = "longdash", lwd = 2, n = 1000, add = TRUE, 
+      col = "green", lty = "solid", lwd = 2, n = 1000, add = TRUE, 
       xlim = c(min(cereal2$sugar[cereal2$Shelf == 2]), max(cereal2$sugar[cereal2$Shelf == 2])))
-      # xlim = c(0,1))  
+
+curve(expr = exp(beta.hat[1,1] + beta.hat[1,2]*x + beta.hat[1,3]*mean_fat + beta.hat[1,4]*mean_sodium)/
+        (1 + exp(beta.hat[1,1] + beta.hat[1,2]*x + beta.hat[1,3]*mean_fat + beta.hat[1,4]*mean_sodium)
+                + exp(beta.hat[2,1] + beta.hat[2,2]*x + beta.hat[2,3]*mean_fat + beta.hat[2,4]*mean_sodium)
+                + exp(beta.hat[3,1] + beta.hat[3,2]*x + beta.hat[3,3]*mean_fat + beta.hat[3,4]*mean_sodium)), 
+      col = "green", lty = "dotdash", lwd = 2, n = 1000, add = TRUE, 
+      xlim = c(0,1))
 
 # Shelf3
 curve(expr = exp(beta.hat[2,1] + beta.hat[2,2]*x + beta.hat[2,3]*mean_fat + beta.hat[2,4]*mean_sodium)/
         (1 + exp(beta.hat[1,1] + beta.hat[1,2]*x + beta.hat[1,3]*mean_fat + beta.hat[1,4]*mean_sodium)
                 + exp(beta.hat[2,1] + beta.hat[2,2]*x + beta.hat[2,3]*mean_fat + beta.hat[2,4]*mean_sodium)
                 + exp(beta.hat[3,1] + beta.hat[3,2]*x + beta.hat[3,3]*mean_fat + beta.hat[3,4]*mean_sodium)),
-  col = "red", lty = "dotdash", lwd = 2, n = 1000, add = TRUE,
+  col = "red", lty = "solid", lwd = 2, n = 1000, add = TRUE,
   xlim = c(min(cereal2$sugar[cereal2$Shelf == 3]), max(cereal2$sugar[cereal2$Shelf == 3])))
-  # xlim = c(0,1))
+
+curve(expr = exp(beta.hat[2,1] + beta.hat[2,2]*x + beta.hat[2,3]*mean_fat + beta.hat[2,4]*mean_sodium)/
+        (1 + exp(beta.hat[1,1] + beta.hat[1,2]*x + beta.hat[1,3]*mean_fat + beta.hat[1,4]*mean_sodium)
+                + exp(beta.hat[2,1] + beta.hat[2,2]*x + beta.hat[2,3]*mean_fat + beta.hat[2,4]*mean_sodium)
+                + exp(beta.hat[3,1] + beta.hat[3,2]*x + beta.hat[3,3]*mean_fat + beta.hat[3,4]*mean_sodium)),
+  col = "red", lty = "dotdash", lwd = 2, n = 1000, add = TRUE,
+  xlim = c(0,1))
 
 # Shelf4
 curve(expr = exp(beta.hat[3,1] + beta.hat[3,2]*x + beta.hat[3,3]*mean_fat + beta.hat[3,4]*mean_sodium)/
         (1 + exp(beta.hat[1,1] + beta.hat[1,2]*x + beta.hat[1,3]*mean_fat + beta.hat[1,4]*mean_sodium)
                 + exp(beta.hat[2,1] + beta.hat[2,2]*x + beta.hat[2,3]*mean_fat + beta.hat[2,4]*mean_sodium)
                 + exp(beta.hat[3,1] + beta.hat[3,2]*x + beta.hat[3,3]*mean_fat + beta.hat[3,4]*mean_sodium)),
-  col = "blue", lty = "dotted", lwd = 2, n = 1000, add = TRUE,
+  col = "blue", lty = "solid", lwd = 2, n = 1000, add = TRUE,
   xlim = c(min(cereal2$sugar[cereal2$Shelf == 4]), max(cereal2$sugar[cereal2$Shelf == 4])))   
-  # xlim = c(0,1))
+
+curve(expr = exp(beta.hat[3,1] + beta.hat[3,2]*x + beta.hat[3,3]*mean_fat + beta.hat[3,4]*mean_sodium)/
+        (1 + exp(beta.hat[1,1] + beta.hat[1,2]*x + beta.hat[1,3]*mean_fat + beta.hat[1,4]*mean_sodium)
+                + exp(beta.hat[2,1] + beta.hat[2,2]*x + beta.hat[2,3]*mean_fat + beta.hat[2,4]*mean_sodium)
+                + exp(beta.hat[3,1] + beta.hat[3,2]*x + beta.hat[3,3]*mean_fat + beta.hat[3,4]*mean_sodium)),
+  col = "blue", lty = "dotdash", lwd = 2, n = 1000, add = TRUE,
+  xlim = c(0,1))
 
 
 
 
 legend(x = 0.5, y = 1.0, legend=c("Shelf 1", "Shelf 2", "Shelf 3", "Shelf 4"), 
-       lty=c("solid","longdash", "dotdash", "dotted"),
+       lty=c("solid","solid", "solid", "solid"),
   col=c("black","green","red", "blue"), bty="n", lwd = c(2,2,2), seg.len = 4)
 
 
 ```
 
-This chart shows the predicted probabilities of which shelf a box of cereal would be found on when sugar content is the only explanatory variable included in the model.
+This chart shows the predicted probabilities of which shelf a box of cereal would be found on when sugar content is the only explanatory variable included in the model, for average levels of fat and sodium. In the chart, solid lines are drawn for sugar levels between the min and max of cereals on each shelf, and dashed lines extend the curves to sugar levels outside this range.
 
-*Additional notes: In particular, the plot shows that for relatively low sugar levels, assuming average levels of fat and sodium, that shelf 3 or shelf 4 are vastly more likely, while for higher sugar content, shelf 2 becomes dominant in likelihood while shelf 1 becomes more likely than the remaining two shelves. This corresponds with the hypothesis that sugary cereals target children, who are closest to Shelves 1 & 2, but for whom shelves 3 & 4 are too difficult to either see or reach. It is also notable that the increase in likelihood for shelf 1 is clear but substantially subdued which can almost certainly be attributed to the assumption of average sodium levels, given that this is the key explanatory variable for shelf 1. 
-
-***Key to-do: Merge solid and dotted line graphs for min-max ranges vs out of sample values respectively.
+In particular, the plot shows that for relatively low sugar levels, assuming average levels of fat and sodium, that shelf 3 or shelf 4 are vastly more likely than the other two shelves, but roughly equivalent to one another, while for higher sugar content, shelf 2 becomes dominant in likelihood while shelf 1 becomes more likely than the remaining two shelves. This corresponds with the hypothesis that sugary cereals target children, who are closest to shelves 1 & 2, but for whom shelves 3 & 4 are too difficult to either see or reach. It is also notable that the increase in likelihood for shelf 1 is clear but substantially subdued which can almost certainly be attributed to the assumption of average sodium levels, given that this is the key explanatory variable for shelf 1 against all other shelves including shelf 2.
 
 ##(h) Estimate odds ratios and calculate corresponding confidence intervals for each explanatory variable. Relate your interpretations back to the plots constructed for this exercise.
 
