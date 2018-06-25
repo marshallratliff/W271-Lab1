@@ -15,15 +15,15 @@ linespace: single
 ```{r}
 
 #Load libraries and insert a function to tidy up the code when they are printed out
-library(vcd)
-library(nnet)
-library(car)
-library(Hmisc)
-library(skimr)
-library(MASS)
+library(vcd, quietly=T)
+library(nnet, quietly=T)
+library(car, quietly=T)
+library(Hmisc, quietly=T)
+library(skimr, quietly=T)
+library(MASS, quietly=T)
 
 rm(list = ls())
-library(knitr)
+library(knitr, quietly=T)
 opts_chunk$set(tidy.opts=list(width.cutoff=60),tidy=TRUE)
 
 ```
@@ -65,7 +65,7 @@ cereal2 <- data.frame(Shelf = cereal$Shelf, Cereal = cereal$Cereal,
 
 ##(b) Construct side-by-side box plots with dot plots overlaid for each of the explanatory variables. Also, construct a parallel coordinates plot for the explanatory variables and the shelf number. Discuss if possible content differences exist among the shelves.
 
-```{r}
+```{r, fig.dim=c(7, 4)}
 boxplot(formula = sugar ~ Shelf, data = cereal2, ylab = "Sugar", 
         xlab = "Shelf", main = "Sugar by Shelf", pars = list(outpch=NA))
 stripchart(x = cereal2$sugar ~ cereal2$Shelf, lwd = 2, col = "red", 
